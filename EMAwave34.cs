@@ -14,7 +14,7 @@ using NinjaTrader.NinjaScript.Indicators;
 
 namespace NinjaTrader.NinjaScript.Indicators
 {
-    [DisplayName("34EMAwave")]
+    [DisplayName("EMAwave34")]
     public class EMAwave34 : Indicator
     {
         private const string BandRegionTag = "MABands";
@@ -24,7 +24,6 @@ namespace NinjaTrader.NinjaScript.Indicators
         private bool _colorOutline = true;
         private bool _showMaBands = true;
         private bool _drawArrows = true;
-        private bool _useRmiFilter = true;
 
         private int _zoneOpacity = 3;
         private Brush _zoneColor = Brushes.Gray;
@@ -34,9 +33,6 @@ namespace NinjaTrader.NinjaScript.Indicators
         private int _emaHighPeriod = 34;
         private int _emaClosePeriod = 34;
         private int _emaLowPeriod = 34;
-
-        private int _rmiPeriod = 14;
-        private int _rmiShift = 3;
 
         private Brush _barColorCondition1 = Brushes.Chartreuse;
         private Brush _barColorCondition2 = Brushes.Green;
@@ -57,22 +53,18 @@ namespace NinjaTrader.NinjaScript.Indicators
         private EMA _emaLow;
         private EMA _emaOne;
 
-        private Series<double> _rmiAvgUp;
-        private Series<double> _rmiAvgDown;
-        private Series<double> _rmiValue;
-
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Name = "34EMAwave";
-                Description = "34EMAwave is an adaptation of the GRAB (GRB) setup used by Raghee Horner.";
+                Name = "EMAwave34";
+                Description = "EMAwave34 is an adaptation of the GRAB (GRB) setup used by Raghee Horner.";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
                 IsSuspendedWhileInactive = true;
+                PaintPriceMarkers = false;
 
                 DrawArrows = true;
-                UseRmiFilter = true;
                 ShowHistoricalArrows = true;
                 ShowMABands = true;
                 Colorzone = true;
@@ -104,84 +96,12 @@ namespace NinjaTrader.NinjaScript.Indicators
                 _emaClose = EMA(Close, Emac);
                 _emaLow = EMA(Low, Emal);
                 _emaOne = EMA(1);
-
-                _rmiAvgUp = new Series<double>(this);
-                _rmiAvgDown = new Series<double>(this);
-                _rmiValue = new Series<double>(this);
             }
         }
 
         private int GetMinimumBarsRequired()
         {
-            int emaBars = Math.Max(Emah, Math.Max(Emac, Emal));
-            int rmiBars = _rmiPeriod + _rmiShift;
-            return Math.Max(emaBars, rmiBars);
-        }
-
-        private void UpdateRmi()
-        {
-            if (CurrentBar == 0)
-            {
-                _rmiAvgUp[0] = 0;
-                _rmiAvgDown[0] = 0;
-                _rmiValue[0] = 0;
-                return;
-            }
-
-            int warmupBars = _rmiPeriod + _rmiShift;
-            if (CurrentBar < warmupBars)
-            {
-                _rmiValue[0] = 0;
-                return;
-            }
-
-            double amountUp;
-            double amountDown;
-
-            if (CurrentBar == warmupBars)
-            {
-                double sumUp = 0;
-                double sumDown = 0;
-
-                for (int barsAgo = 0; barsAgo < _rmiPeriod; barsAgo++)
-                {
-                    amountUp = Input[barsAgo] - Input[barsAgo + _rmiShift];
-                    if (amountUp >= 0)
-                    {
-                        amountDown = 0;
-                    }
-                    else
-                    {
-                        amountDown = -amountUp;
-                        amountUp = 0;
-                    }
-
-                    sumUp += amountUp;
-                    sumDown += amountDown;
-                }
-
-                _rmiAvgUp[0] = sumUp / _rmiPeriod;
-                _rmiAvgDown[0] = sumDown / _rmiPeriod;
-            }
-            else
-            {
-                amountUp = Input[0] - Input[_rmiShift];
-                if (amountUp >= 0)
-                {
-                    amountDown = 0;
-                }
-                else
-                {
-                    amountDown = -amountUp;
-                    amountUp = 0;
-                }
-
-                _rmiAvgUp[0] = (_rmiAvgUp[1] * (_rmiPeriod - 1) + amountUp) / _rmiPeriod;
-                _rmiAvgDown[0] = (_rmiAvgDown[1] * (_rmiPeriod - 1) + amountDown) / _rmiPeriod;
-            }
-
-            double denom = _rmiAvgUp[0] + _rmiAvgDown[0];
-            _rmiValue[0] = denom != 0 ? 100.0 * _rmiAvgUp[0] / denom : 0;
+            return Math.Max(Emah, Math.Max(Emac, Emal));
         }
 
         private void UpdateEmaPlots(double emaHigh, double emaClose, double emaLow)
@@ -239,25 +159,22 @@ namespace NinjaTrader.NinjaScript.Indicators
                 CandleOutlineBrush = outlineBrush;
         }
 
-        private void UpdateSignals(double emaHigh, double emaLow)
+        private void UpdateSignals(double emaHigh, double emaLow, bool canDraw)
         {
-            if ((!UseRmiFilter || IsFalling(_rmiValue))
-                && Close[1] < Open[1]
+            if (Close[1] < Open[1]
                 && Close[0] < Open[0]
                 && CrossBelow(_emaOne, emaLow, 1))
             {
-                if (_drawArrows)
+                if (_drawArrows && canDraw)
                     Draw.ArrowDown(this, "ARROWDOWN" + (ShowHistoricalArrows ? CurrentBar.ToString() : ToString()), false, 0, High[0] + TickSize, Brushes.White);
 
                 MAnalyzer[0] = -1;
             }
-
-            if ((!UseRmiFilter || IsRising(_rmiValue))
-                && Close[1] > Open[1]
+            if (Close[1] > Open[1]
                 && Close[0] > Open[0]
                 && CrossAbove(_emaOne, emaHigh, 1))
             {
-                if (_drawArrows)
+                if (_drawArrows && canDraw)
                     Draw.ArrowUp(this, "ARROWUP" + (ShowHistoricalArrows ? CurrentBar.ToString() : ToString()), false, 0, Low[0] - TickSize, Brushes.White);
 
                 MAnalyzer[0] = 1;
@@ -269,20 +186,20 @@ namespace NinjaTrader.NinjaScript.Indicators
             if (CurrentBar < GetMinimumBarsRequired())
                 return;
 
-            UpdateRmi();
-
             double emaHigh = _emaHigh[0];
             double emaClose = _emaClose[0];
             double emaLow = _emaLow[0];
 
-            UpdateBarColors(emaHigh, emaLow);
+            bool canDraw = ChartControl != null;
             UpdateEmaPlots(emaHigh, emaClose, emaLow);
-            UpdateMaPlotColors();
-
-            if (Colorzone)
-                Draw.Region(this, BandRegionTag, CurrentBar, 0, EmaHigh, EmaLow, Brushes.Transparent, ZoneColor, Zopacity);
-
-            UpdateSignals(emaHigh, emaLow);
+            if (canDraw)
+            {
+                UpdateBarColors(emaHigh, emaLow);
+                UpdateMaPlotColors();
+                if (Colorzone)
+                    Draw.Region(this, BandRegionTag, CurrentBar, 0, EmaHigh, EmaLow, Brushes.Transparent, ZoneColor, Zopacity);
+            }
+            UpdateSignals(emaHigh, emaLow, canDraw);
         }
 
         [Browsable(false)]
@@ -331,14 +248,6 @@ namespace NinjaTrader.NinjaScript.Indicators
             get { return _emaLowPeriod; }
             set { _emaLowPeriod = Math.Max(1, value); }
         }
-
-		[NinjaScriptProperty]
-		[Display(Name = "Use RMI Filter", Description = "When enabled, arrows require RMI to be rising for buys and falling for sells.", GroupName = "Properties", Order = 0)]
-		public bool UseRmiFilter
-		{
-			get { return _useRmiFilter; }
-			set { _useRmiFilter = value; }
-		}
 		
 		[XmlIgnore]
 		[Display(Name = "BarCondition1", Description = "Color of BarCondition1.", GroupName = "Visual", Order = 1)]
@@ -630,7 +539,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 
     [Browsable(false)]
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public class _34EMAwave : EMAwave34
+    public class _EMAwave34 : EMAwave34
     {
     }
 }
@@ -641,33 +550,33 @@ namespace NinjaTrader.NinjaScript.Indicators
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
 		private EMAwave34[] cache_EMAwave34;
-		public EMAwave34 EMAwave34(bool useRmiFilter, bool drawArrows)
+		public EMAwave34 EMAwave34(bool drawArrows)
 		{
-			return EMAwave34(Input, useRmiFilter, drawArrows);
+			return EMAwave34(Input, drawArrows);
 		}
 
-		public EMAwave34 EMAwave34(ISeries<double> input, bool useRmiFilter, bool drawArrows)
+		public EMAwave34 EMAwave34(ISeries<double> input, bool drawArrows)
 		{
 			if (cache_EMAwave34 != null)
 				for (int idx = 0; idx < cache_EMAwave34.Length; idx++)
-					if (cache_EMAwave34[idx] != null && cache_EMAwave34[idx].UseRmiFilter == useRmiFilter && cache_EMAwave34[idx].DrawArrows == drawArrows && cache_EMAwave34[idx].EqualsInput(input))
+					if (cache_EMAwave34[idx] != null && cache_EMAwave34[idx].DrawArrows == drawArrows && cache_EMAwave34[idx].EqualsInput(input))
 						return cache_EMAwave34[idx];
-			return CacheIndicator<EMAwave34>(new EMAwave34(){ UseRmiFilter = useRmiFilter, DrawArrows = drawArrows }, input, ref cache_EMAwave34);
+			return CacheIndicator<EMAwave34>(new EMAwave34(){ DrawArrows = drawArrows }, input, ref cache_EMAwave34);
 		}
 
-		private _34EMAwave[] cache__34EMAwave;
-		public _34EMAwave _34EMAwave(bool useRmiFilter, bool drawArrows)
+		private _EMAwave34[] cache__EMAwave34;
+		public _EMAwave34 _EMAwave34(bool drawArrows)
 		{
-			return _34EMAwave(Input, useRmiFilter, drawArrows);
+			return _EMAwave34(Input, drawArrows);
 		}
 
-		public _34EMAwave _34EMAwave(ISeries<double> input, bool useRmiFilter, bool drawArrows)
+		public _EMAwave34 _EMAwave34(ISeries<double> input, bool drawArrows)
 		{
-			if (cache__34EMAwave != null)
-				for (int idx = 0; idx < cache__34EMAwave.Length; idx++)
-					if (cache__34EMAwave[idx] != null && cache__34EMAwave[idx].UseRmiFilter == useRmiFilter && cache__34EMAwave[idx].DrawArrows == drawArrows && cache__34EMAwave[idx].EqualsInput(input))
-						return cache__34EMAwave[idx];
-			return CacheIndicator<_34EMAwave>(new _34EMAwave(){ UseRmiFilter = useRmiFilter, DrawArrows = drawArrows }, input, ref cache__34EMAwave);
+			if (cache__EMAwave34 != null)
+				for (int idx = 0; idx < cache__EMAwave34.Length; idx++)
+					if (cache__EMAwave34[idx] != null && cache__EMAwave34[idx].DrawArrows == drawArrows && cache__EMAwave34[idx].EqualsInput(input))
+						return cache__EMAwave34[idx];
+			return CacheIndicator<_EMAwave34>(new _EMAwave34(){ DrawArrows = drawArrows }, input, ref cache__EMAwave34);
 		}
 	}
 }
@@ -676,24 +585,24 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.EMAwave34 EMAwave34(bool useRmiFilter, bool drawArrows)
+		public Indicators.EMAwave34 EMAwave34(bool drawArrows)
 		{
-			return indicator.EMAwave34(Input, useRmiFilter, drawArrows);
+			return indicator.EMAwave34(Input, drawArrows);
 		}
 
-		public Indicators.EMAwave34 EMAwave34(ISeries<double> input , bool useRmiFilter, bool drawArrows)
+		public Indicators.EMAwave34 EMAwave34(ISeries<double> input , bool drawArrows)
 		{
-			return indicator.EMAwave34(input, useRmiFilter, drawArrows);
+			return indicator.EMAwave34(input, drawArrows);
 		}
 
-		public Indicators._34EMAwave _34EMAwave(bool useRmiFilter, bool drawArrows)
+		public Indicators._EMAwave34 _EMAwave34(bool drawArrows)
 		{
-			return indicator._34EMAwave(Input, useRmiFilter, drawArrows);
+			return indicator._EMAwave34(Input, drawArrows);
 		}
 
-		public Indicators._34EMAwave _34EMAwave(ISeries<double> input , bool useRmiFilter, bool drawArrows)
+		public Indicators._EMAwave34 _EMAwave34(ISeries<double> input , bool drawArrows)
 		{
-			return indicator._34EMAwave(input, useRmiFilter, drawArrows);
+			return indicator._EMAwave34(input, drawArrows);
 		}
 	}
 }
@@ -702,24 +611,24 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.EMAwave34 EMAwave34(bool useRmiFilter, bool drawArrows)
+		public Indicators.EMAwave34 EMAwave34(bool drawArrows)
 		{
-			return indicator.EMAwave34(Input, useRmiFilter, drawArrows);
+			return indicator.EMAwave34(Input, drawArrows);
 		}
 
-		public Indicators.EMAwave34 EMAwave34(ISeries<double> input , bool useRmiFilter, bool drawArrows)
+		public Indicators.EMAwave34 EMAwave34(ISeries<double> input , bool drawArrows)
 		{
-			return indicator.EMAwave34(input, useRmiFilter, drawArrows);
+			return indicator.EMAwave34(input, drawArrows);
 		}
 
-		public Indicators._34EMAwave _34EMAwave(bool useRmiFilter, bool drawArrows)
+		public Indicators._EMAwave34 _EMAwave34(bool drawArrows)
 		{
-			return indicator._34EMAwave(Input, useRmiFilter, drawArrows);
+			return indicator._EMAwave34(Input, drawArrows);
 		}
 
-		public Indicators._34EMAwave _34EMAwave(ISeries<double> input , bool useRmiFilter, bool drawArrows)
+		public Indicators._EMAwave34 _EMAwave34(ISeries<double> input , bool drawArrows)
 		{
-			return indicator._34EMAwave(input, useRmiFilter, drawArrows);
+			return indicator._EMAwave34(input, drawArrows);
 		}
 	}
 }

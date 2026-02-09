@@ -1,5 +1,5 @@
-# 34EMAwave Deployment Script
-# Copies 34EMAwave indicator + strategy source files to NinjaTrader target folders
+# EMAwave34 Deployment Script
+# Copies EMAwave34 indicator + strategy source files to NinjaTrader target folders
 #
 # NOTE: This script performs an ASCII-only + UTF-8 BOM guard
 # so you can just run deploy.ps1 before compiling.
@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = if (-not [string]::IsNullOrEmpty($PSScriptRoot)) { $PSScriptRoot } else { (Get-Location).Path }
 
-Write-Host "`n=== 34EMAwave Pre-Deploy Checks ===" -ForegroundColor Cyan
+Write-Host "`n=== EMAwave34 Pre-Deploy Checks ===" -ForegroundColor Cyan
 Write-Host "Running ASCII/BOM check..." -ForegroundColor Yellow
 
 function Test-AsciiNoBom {
@@ -57,17 +57,21 @@ if ($asciiFailures.Count -gt 0) {
 $source = $repoRoot
 $strategyTarget = "C:\Users\Administrator\Documents\NinjaTrader 8\bin\Custom\Strategies"
 $indicatorTarget = "C:\Users\Administrator\Documents\NinjaTrader 8\bin\Custom\Indicators"
-Write-Host "`n=== 34EMAwave Deployment ===" -ForegroundColor Cyan
+Write-Host "`n=== EMAwave34 Deployment ===" -ForegroundColor Cyan
 
 # Strategy files
 $strategyFiles = @(
-    "34EMAwaveStrategy.cs",
-    "ServiceLogger.cs"
+    "EMAwave34Strategy.cs",
+    "EMAwave34ServiceLogger.cs",
+    "EMAwave34ServiceMacdFilter.cs",
+    "EMAwave34ServiceVrocFilter.cs",
+    "EMAwave34InfoPanel.cs",
+    "EMAwave34ControlPanel.cs"
 )
 
 # Indicator files
 $indicatorFiles = @(
-    "34emawave.cs"
+    "EMAwave34.cs"
 )
 
 # Copy strategy files
@@ -103,7 +107,9 @@ foreach ($file in $indicatorFiles) {
 }
 
 # Cleanup: remove legacy files if present on target
-$legacyStrategyFiles = @()
+$legacyStrategyFiles = @(
+    "34EMAwaveStrategy.cs"
+)
 foreach ($legacy in $legacyStrategyFiles) {
     $legacyPath = Join-Path $strategyTarget $legacy
     if (Test-Path $legacyPath) {
@@ -112,7 +118,10 @@ foreach ($legacy in $legacyStrategyFiles) {
     }
 }
 
-$legacyIndicators = @("RMI.cs", "mahTrendGRaBer2.cs")
+$legacyIndicators = @(
+    "34emawave.cs",
+    "mahTrendGRaBer2.cs"
+)
 foreach ($legacy in $legacyIndicators) {
     $legacyPath = Join-Path $indicatorTarget $legacy
     if (Test-Path $legacyPath) {
