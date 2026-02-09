@@ -11,19 +11,18 @@ In `C:\Users\Administrator\Documents\EMAwave34`, stage all changes, create a com
   - Indicator drawings suppressed when no `ChartControl` (Analyzer) to keep runs clean.
   - Info panel disposed on termination.
   - Trading-hours gate uses wall-clock **only** in realtime non-Playback; otherwise bar time.
-## Latest observation (2026-02-09)
-- **MACD Hist:** -3.09 with **Min 1.00** and **READY (min 35)**
-  - For a long, MACD filter would block (needs ≥ +1.00).
-  - For a short, MACD filter would pass (needs ≤ −1.00).
-- **VROC:** -41.30% with **Min 15.00%** and **READY (min 19)**
-  - Blocks both long and short, because VROC must be ≥ 15%.
-- Result: **VROC is the blocking filter**.
-## Latest change (2026-02-09)
-- Session PnL baseline now resets when the strategy is enabled (in addition to session start), so the info panel reflects trades taken since enable.
+## Latest changes (2026-02-09)
+- **Indicator Visual renaming:** bar/outline color properties renamed to descriptive names (e.g., “Bullish Above EMA High”). Note: serialized property names changed, so older templates/workspaces may reset these colors.
+- **Info Panel readability:** MACD/VROC lines are compact; `Hist`/`Value` now appear on an indented second line to reduce line length.
+- **Filter logging clarity:** per-filter block logs replaced by a single `[ENTRY_DECISION]` line per signal; added one-time `[FILTER_READY]` logs when MACD/VROC warm up; added one-time `[FILTER] ... disabled` logs.
+- **Session PnL baseline** resets when the strategy is enabled (in addition to session start), so the info panel reflects trades taken since enable.
 
 ## Latest logging (for debugging trade rule violations)
 Conditional (EnableDebugLogging = true) logs now include:
 - Per-bar EMA snapshot: `[BAR] Time=... Close=... EmaHigh=... EmaClose=... EmaLow=...`
+- Filter decision snapshot (per signal): `[ENTRY_DECISION] Signal=Long/Short Allowed=... MACD(...) VROC(...)`
+- Filter readiness (one-time): `[FILTER_READY] MACD/VROC ready ...`
+- Filter disabled (one-time): `[FILTER] MACD/VROC disabled; gating bypassed.`
 - Entry signals:
   - `[ENTRY_SIGNAL] Long/Short` with Close, EMA values, MAnalyzer cross, ATR
 - Exit rules:
@@ -37,15 +36,17 @@ Control Panel debug spam **removed** (UpdateState logs).
 ## Files touched / new
 - `EMAwave34Strategy.cs`
   - Control panel wiring, internal `_strategyEnabled` gate, info panel immediate hide/show
-  - Added detailed entry/exit/bar logs
+  - Added detailed entry/exit/bar logs and filter decision/ready logs
   - Trading-hours uses wall-clock in realtime non-Playback
   - Disposes info panel on termination
 - `EMAwave34ControlPanel.cs` (new)
   - WPF control panel module (Enable Strategy / Display Info Panel)
-- `EMAwave34InfoPanel.cs` (unchanged)
+- `EMAwave34InfoPanel.cs`
+  - MACD/VROC lines condensed; Hist/Value moved to indented detail line
 - `EMAwave34.cs`
   - Drawing gated by `ChartControl != null` (Analyzer-safe)
   - `UpdateSignals` now takes `canDraw`
+  - Renamed bar/outline color properties to descriptive names
 - `EMAwave34ServiceMacdFilter.cs` (new)
 - `EMAwave34ServiceVrocFilter.cs` (new)
 - `deploy.ps1`

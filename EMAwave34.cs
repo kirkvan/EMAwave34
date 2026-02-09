@@ -34,19 +34,19 @@ namespace NinjaTrader.NinjaScript.Indicators
         private int _emaClosePeriod = 34;
         private int _emaLowPeriod = 34;
 
-        private Brush _barColorCondition1 = Brushes.Chartreuse;
-        private Brush _barColorCondition2 = Brushes.Green;
-        private Brush _barColorCondition3 = Brushes.LightBlue;
-        private Brush _barColorCondition4 = Brushes.RoyalBlue;
-        private Brush _barColorCondition5 = Brushes.DarkOrange;
-        private Brush _barColorCondition6 = Brushes.Red;
+        private Brush _barColorBullishAboveEmaHigh = Brushes.Chartreuse;
+        private Brush _barColorBearishAboveEmaHigh = Brushes.Green;
+        private Brush _barColorBullishInsideBand = Brushes.LightBlue;
+        private Brush _barColorBearishInsideBand = Brushes.RoyalBlue;
+        private Brush _barColorBullishBelowEmaLow = Brushes.DarkOrange;
+        private Brush _barColorBearishBelowEmaLow = Brushes.Red;
 
-        private Brush _candleOutlineCondition1 = Brushes.Chartreuse;
-        private Brush _candleOutlineCondition2 = Brushes.Green;
-        private Brush _candleOutlineCondition3 = Brushes.LightBlue;
-        private Brush _candleOutlineCondition4 = Brushes.RoyalBlue;
-        private Brush _candleOutlineCondition5 = Brushes.DarkOrange;
-        private Brush _candleOutlineCondition6 = Brushes.Red;
+        private Brush _outlineColorBullishAboveEmaHigh = Brushes.Chartreuse;
+        private Brush _outlineColorBearishAboveEmaHigh = Brushes.Green;
+        private Brush _outlineColorBullishInsideBand = Brushes.LightBlue;
+        private Brush _outlineColorBearishInsideBand = Brushes.RoyalBlue;
+        private Brush _outlineColorBullishBelowEmaLow = Brushes.DarkOrange;
+        private Brush _outlineColorBearishBelowEmaLow = Brushes.Red;
 
         private EMA _emaHigh;
         private EMA _emaClose;
@@ -132,22 +132,22 @@ namespace NinjaTrader.NinjaScript.Indicators
             double close = Close[0];
 
             if (open <= close && close > emaHigh)
-                ApplyBarColor(_barColorCondition1, _candleOutlineCondition1);
+                ApplyBarColor(_barColorBullishAboveEmaHigh, _outlineColorBullishAboveEmaHigh);
 
             if (open >= close && close > emaHigh)
-                ApplyBarColor(_barColorCondition2, _candleOutlineCondition2);
+                ApplyBarColor(_barColorBearishAboveEmaHigh, _outlineColorBearishAboveEmaHigh);
 
             if (open <= close && close < emaHigh && close > emaLow)
-                ApplyBarColor(_barColorCondition3, _candleOutlineCondition3);
+                ApplyBarColor(_barColorBullishInsideBand, _outlineColorBullishInsideBand);
 
             if (open >= close && close < emaHigh && close > emaLow)
-                ApplyBarColor(_barColorCondition4, _candleOutlineCondition4);
+                ApplyBarColor(_barColorBearishInsideBand, _outlineColorBearishInsideBand);
 
             if (open <= close && close < emaLow)
-                ApplyBarColor(_barColorCondition5, _candleOutlineCondition5);
+                ApplyBarColor(_barColorBullishBelowEmaLow, _outlineColorBullishBelowEmaLow);
 
             if (open >= close && close < emaLow)
-                ApplyBarColor(_barColorCondition6, _candleOutlineCondition6);
+                ApplyBarColor(_barColorBearishBelowEmaLow, _outlineColorBearishBelowEmaLow);
         }
 
         private void ApplyBarColor(Brush barBrush, Brush outlineBrush)
@@ -250,194 +250,194 @@ namespace NinjaTrader.NinjaScript.Indicators
         }
 		
 		[XmlIgnore]
-		[Display(Name = "BarCondition1", Description = "Color of BarCondition1.", GroupName = "Visual", Order = 1)]
-        public Brush BarCondition1
+		[Display(Name = "Bar Color: Bullish Above EMA High", Description = "Bar color when Close > EMA High and the bar is bullish.", GroupName = "Visual", Order = 1)]
+        public Brush BarColorBullishAboveEmaHigh
         {
-            get { return _barColorCondition1; }
-            set { _barColorCondition1 = value; }
+            get { return _barColorBullishAboveEmaHigh; }
+            set { _barColorBullishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition1Serialize
+        public string BarColorBullishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition1); }
-            set { _barColorCondition1 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBullishAboveEmaHigh); }
+            set { _barColorBullishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "BarCondition2", Description = "Color of BarCondition2.", GroupName = "Visual", Order = 2)]
-        public Brush BarCondition2
+		[Display(Name = "Bar Color: Bearish Above EMA High", Description = "Bar color when Close > EMA High and the bar is bearish.", GroupName = "Visual", Order = 2)]
+        public Brush BarColorBearishAboveEmaHigh
         {
-            get { return _barColorCondition2; }
-            set { _barColorCondition2 = value; }
+            get { return _barColorBearishAboveEmaHigh; }
+            set { _barColorBearishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition2Serialize
+        public string BarColorBearishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition2); }
-            set { _barColorCondition2 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBearishAboveEmaHigh); }
+            set { _barColorBearishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "BarCondition3", Description = "Color of BarCondition3.", GroupName = "Visual", Order = 3)]
-        public Brush BarCondition3
+		[Display(Name = "Bar Color: Bullish Inside EMA Band", Description = "Bar color when Close is between EMA High/Low and the bar is bullish.", GroupName = "Visual", Order = 3)]
+        public Brush BarColorBullishInsideBand
         {
-            get { return _barColorCondition3; }
-            set { _barColorCondition3 = value; }
+            get { return _barColorBullishInsideBand; }
+            set { _barColorBullishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition3Serialize
+        public string BarColorBullishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition3); }
-            set { _barColorCondition3 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBullishInsideBand); }
+            set { _barColorBullishInsideBand = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "BarCondition4", Description = "Color of BarCondition4.", GroupName = "Visual", Order = 4)]
-        public Brush BarCondition4
+		[Display(Name = "Bar Color: Bearish Inside EMA Band", Description = "Bar color when Close is between EMA High/Low and the bar is bearish.", GroupName = "Visual", Order = 4)]
+        public Brush BarColorBearishInsideBand
         {
-            get { return _barColorCondition4; }
-            set { _barColorCondition4 = value; }
+            get { return _barColorBearishInsideBand; }
+            set { _barColorBearishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition4Serialize
+        public string BarColorBearishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition4); }
-            set { _barColorCondition4 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBearishInsideBand); }
+            set { _barColorBearishInsideBand = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "BarCondition5", Description = "Color of BarCondition5.", GroupName = "Visual", Order = 5)]
-        public Brush BarCondition5
+		[Display(Name = "Bar Color: Bullish Below EMA Low", Description = "Bar color when Close < EMA Low and the bar is bullish.", GroupName = "Visual", Order = 5)]
+        public Brush BarColorBullishBelowEmaLow
         {
-            get { return _barColorCondition5; }
-            set { _barColorCondition5 = value; }
+            get { return _barColorBullishBelowEmaLow; }
+            set { _barColorBullishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition5Serialize
+        public string BarColorBullishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition5); }
-            set { _barColorCondition5 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBullishBelowEmaLow); }
+            set { _barColorBullishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "BarCondition6", Description = "Color of BarCondition6.", GroupName = "Visual", Order = 6)]
-        public Brush BarCondition6
+		[Display(Name = "Bar Color: Bearish Below EMA Low", Description = "Bar color when Close < EMA Low and the bar is bearish.", GroupName = "Visual", Order = 6)]
+        public Brush BarColorBearishBelowEmaLow
         {
-            get { return _barColorCondition6; }
-            set { _barColorCondition6 = value; }
+            get { return _barColorBearishBelowEmaLow; }
+            set { _barColorBearishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition6Serialize
+        public string BarColorBearishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition6); }
-            set { _barColorCondition6 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBearishBelowEmaLow); }
+            set { _barColorBearishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "CandleOutlineCondition1", Description = "Color of CandleOutlineCondition1.", GroupName = "Visual", Order = 1)]
-        public Brush CandleOutlineCondition1
+		[Display(Name = "Outline Color: Bullish Above EMA High", Description = "Outline color when Close > EMA High and the bar is bullish.", GroupName = "Visual", Order = 7)]
+        public Brush OutlineColorBullishAboveEmaHigh
         {
-            get { return _candleOutlineCondition1; }
-            set { _candleOutlineCondition1 = value; }
+            get { return _outlineColorBullishAboveEmaHigh; }
+            set { _outlineColorBullishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition1Serialize
+        public string OutlineColorBullishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition1); }
-            set { _candleOutlineCondition1 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBullishAboveEmaHigh); }
+            set { _outlineColorBullishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 				
 		[XmlIgnore]
 				
-		[Display(Name = "CandleOutlineCondition2", Description = "Color of CandleOutlineCondition2.", GroupName = "Visual", Order = 2)]
-        public Brush CandleOutlineCondition2
+		[Display(Name = "Outline Color: Bearish Above EMA High", Description = "Outline color when Close > EMA High and the bar is bearish.", GroupName = "Visual", Order = 8)]
+        public Brush OutlineColorBearishAboveEmaHigh
         {
-            get { return _candleOutlineCondition2; }
-            set { _candleOutlineCondition2 = value; }
+            get { return _outlineColorBearishAboveEmaHigh; }
+            set { _outlineColorBearishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition2Serialize
+        public string OutlineColorBearishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition2); }
-            set { _candleOutlineCondition2 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBearishAboveEmaHigh); }
+            set { _outlineColorBearishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "CandleOutlineCondition3", Description = "Color of CandleOutlineCondition3.", GroupName = "Visual", Order = 3)]
-        public Brush CandleOutlineCondition3
+		[Display(Name = "Outline Color: Bullish Inside EMA Band", Description = "Outline color when Close is between EMA High/Low and the bar is bullish.", GroupName = "Visual", Order = 9)]
+        public Brush OutlineColorBullishInsideBand
         {
-            get { return _candleOutlineCondition3; }
-            set { _candleOutlineCondition3 = value; }
+            get { return _outlineColorBullishInsideBand; }
+            set { _outlineColorBullishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition3Serialize
+        public string OutlineColorBullishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition3); }
-            set { _candleOutlineCondition3 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBullishInsideBand); }
+            set { _outlineColorBullishInsideBand = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "CandleOutlineCondition4", Description = "Color of CandleOutlineCondition4.", GroupName = "Visual", Order = 4)]
-        public Brush CandleOutlineCondition4
+		[Display(Name = "Outline Color: Bearish Inside EMA Band", Description = "Outline color when Close is between EMA High/Low and the bar is bearish.", GroupName = "Visual", Order = 10)]
+        public Brush OutlineColorBearishInsideBand
         {
-            get { return _candleOutlineCondition4; }
-            set { _candleOutlineCondition4 = value; }
+            get { return _outlineColorBearishInsideBand; }
+            set { _outlineColorBearishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition4Serialize
+        public string OutlineColorBearishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition4); }
-            set { _candleOutlineCondition4 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBearishInsideBand); }
+            set { _outlineColorBearishInsideBand = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "CandleOutlineCondition5", Description = "Color of CandleOutlineCondition5.", GroupName = "Visual", Order = 5)]
-        public Brush CandleOutlineCondition5
+		[Display(Name = "Outline Color: Bullish Below EMA Low", Description = "Outline color when Close < EMA Low and the bar is bullish.", GroupName = "Visual", Order = 11)]
+        public Brush OutlineColorBullishBelowEmaLow
         {
-            get { return _candleOutlineCondition5; }
-            set { _candleOutlineCondition5 = value; }
+            get { return _outlineColorBullishBelowEmaLow; }
+            set { _outlineColorBullishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition5Serialize
+        public string OutlineColorBullishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition5); }
-            set { _candleOutlineCondition5 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBullishBelowEmaLow); }
+            set { _outlineColorBullishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 		
 		[XmlIgnore]
 		
-		[Display(Name = "CandleOutlineCondition6", Description = "Color of CandleOutlineCondition6.", GroupName = "Visual", Order = 6)]
-        public Brush CandleOutlineCondition6
+		[Display(Name = "Outline Color: Bearish Below EMA Low", Description = "Outline color when Close < EMA Low and the bar is bearish.", GroupName = "Visual", Order = 12)]
+        public Brush OutlineColorBearishBelowEmaLow
         {
-            get { return _candleOutlineCondition6; }
-            set { _candleOutlineCondition6 = value; }
+            get { return _outlineColorBearishBelowEmaLow; }
+            set { _outlineColorBearishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition6Serialize
+        public string OutlineColorBearishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition6); }
-            set { _candleOutlineCondition6 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBearishBelowEmaLow); }
+            set { _outlineColorBearishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 		
 		[NinjaScriptProperty]	

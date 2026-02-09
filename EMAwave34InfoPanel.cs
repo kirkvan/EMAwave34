@@ -89,42 +89,41 @@ namespace NinjaTrader.NinjaScript.Strategies
             {
                 string histText = double.IsNaN(_strategy.MacdHistogram) ? "n/a" : _strategy.MacdHistogram.ToString("F2");
                 string macdWarmupText = _strategy.MacdFilterReady
-                    ? $"READY (min {_strategy.MacdWarmupBarsRequired})"
+                    ? "READY"
                     : $"WARMUP {_strategy.MacdWarmupBarsRemaining}/{_strategy.MacdWarmupBarsRequired}";
                 bool macdLongAllowed = _strategy.MacdFilterReady &&
                                        _strategy.MacdHistogram >= _strategy.MacdHistogramThreshold;
                 bool macdShortAllowed = _strategy.MacdFilterReady &&
                                         _strategy.MacdHistogram <= -_strategy.MacdHistogramThreshold;
                 string macdEntryText = $"Longs {(macdLongAllowed ? "Allowed" : "Blocked")}, Shorts {(macdShortAllowed ? "Allowed" : "Blocked")}";
-                macdText = $"MACD Hist: {histText} (Min {_strategy.MacdHistogramThreshold:F2})\n" +
-                           $"  {macdWarmupText}\n" +
-                           $"  {macdEntryText}";
+                macdText = $"MACD: ON | {macdWarmupText} | {macdEntryText}\n" +
+                           $"  Hist {histText} (Min {_strategy.MacdHistogramThreshold:F2})";
             }
             else
             {
-                macdText = "MACD Filter: OFF";
+                macdText = "MACD: OFF";
             }
             string vrocText;
             if (_strategy.EnableVrocFilter)
             {
                 string vrocValue = double.IsNaN(_strategy.VrocValue) ? "n/a" : _strategy.VrocValue.ToString("F2");
                 string vrocWarmupText = _strategy.VrocFilterReady
-                    ? $"READY (min {_strategy.VrocWarmupBarsRequired})"
+                    ? "READY"
                     : $"WARMUP {_strategy.VrocWarmupBarsRemaining}/{_strategy.VrocWarmupBarsRequired}";
                 bool vrocAllowsEntries = _strategy.VrocFilterReady &&
                                          _strategy.VrocValue >= _strategy.VrocMin;
                 string vrocEntryText = vrocAllowsEntries ? "Longs Allowed, Shorts Allowed" : "Longs Blocked, Shorts Blocked";
-                vrocText = $"VROC: {vrocValue}% (Min {_strategy.VrocMin:F2}%)\n" +
-                           $"  {vrocWarmupText}\n" +
-                           $"  {vrocEntryText}";
+                vrocText = $"VROC: ON | {vrocWarmupText} | {vrocEntryText}\n" +
+                           $"  Value {vrocValue}% (Min {_strategy.VrocMin:F2}%)";
             }
             else
             {
-                vrocText = "VROC Filter: OFF";
+                vrocText = "VROC: OFF";
             }
 
             return "=== Entry/Stops ===\n" +
                    $"Qty: {_strategy.PositionQuantity}\n" +
+                   $"Scale-In: {_strategy.ScaleInPositions}/{_strategy.MaxScaleInPositions} (Orig {_strategy.OriginalPositions})\n" +
                    $"ATR(14): {atrText}\n" +
                    $"Target x{_strategy.ProfitTargetAtr:F1}  Stop x{_strategy.StopLossAtr:F1}\n" +
                    $"Trail Stop: {(_strategy.EnableTrailingStop ? "ON" : "OFF")}\n" +

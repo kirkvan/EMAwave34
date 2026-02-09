@@ -42,6 +42,10 @@ namespace NinjaTrader.NinjaScript.Strategies
         private double _highestSinceEntry;
         private double _lowestSinceEntry;
         private double _activeStopPrice = double.NaN;
+        private double _activeTargetPrice = double.NaN;
+        private bool _breakevenActivated;
+        private int _breakevenActivatedBar = -1;
+        private int _lastScaleInBar = -1;
 
         private int _positionQuantity = 1;
         private double _maxLoss = 500;
@@ -57,6 +61,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         private bool _enableBreakeven = true;
         private double _breakevenAtr = 1.0;
         private int _breakevenPlusTicks = 1;
+        private bool _enableScaleInAfterBreakeven;
+        private int _maxAdditionalEntries = 1;
         private bool _displayInfoPanel = true;
         private int _infoPanelFontSize = 11;
         private TextPosition _infoPanelPosition = TextPosition.TopRight;
@@ -83,25 +89,27 @@ namespace NinjaTrader.NinjaScript.Strategies
         private int _macdSlow = 26;
         private int _macdSmooth = 9;
         private double _macdHistogramThreshold = 0.0;
+        private bool _macdReadyLogged;
 
         private bool _enableVrocFilter;
         private int _vrocPeriod = 14;
         private int _vrocSmooth = 3;
         private double _vrocMin = 0.0;
+        private bool _vrocReadyLogged;
 
-        private Brush _barColorCondition1 = Brushes.Chartreuse;
-        private Brush _barColorCondition2 = Brushes.Green;
-        private Brush _barColorCondition3 = Brushes.LightBlue;
-        private Brush _barColorCondition4 = Brushes.RoyalBlue;
-        private Brush _barColorCondition5 = Brushes.DarkOrange;
-        private Brush _barColorCondition6 = Brushes.Red;
+        private Brush _barColorBullishAboveEmaHigh = Brushes.Chartreuse;
+        private Brush _barColorBearishAboveEmaHigh = Brushes.Green;
+        private Brush _barColorBullishInsideBand = Brushes.LightBlue;
+        private Brush _barColorBearishInsideBand = Brushes.RoyalBlue;
+        private Brush _barColorBullishBelowEmaLow = Brushes.DarkOrange;
+        private Brush _barColorBearishBelowEmaLow = Brushes.Red;
 
-        private Brush _candleOutlineCondition1 = Brushes.Chartreuse;
-        private Brush _candleOutlineCondition2 = Brushes.Green;
-        private Brush _candleOutlineCondition3 = Brushes.LightBlue;
-        private Brush _candleOutlineCondition4 = Brushes.RoyalBlue;
-        private Brush _candleOutlineCondition5 = Brushes.DarkOrange;
-        private Brush _candleOutlineCondition6 = Brushes.Red;
+        private Brush _outlineColorBullishAboveEmaHigh = Brushes.Chartreuse;
+        private Brush _outlineColorBearishAboveEmaHigh = Brushes.Green;
+        private Brush _outlineColorBullishInsideBand = Brushes.LightBlue;
+        private Brush _outlineColorBearishInsideBand = Brushes.RoyalBlue;
+        private Brush _outlineColorBullishBelowEmaLow = Brushes.DarkOrange;
+        private Brush _outlineColorBearishBelowEmaLow = Brushes.Red;
 
         protected override void OnStateChange()
         {
@@ -129,6 +137,8 @@ namespace NinjaTrader.NinjaScript.Strategies
                 EnableBreakeven = true;
                 BreakevenAtr = 1.0;
                 BreakevenPlusTicks = 1;
+                EnableScaleInAfterBreakeven = false;
+                MaxAdditionalEntries = 70;
                 DisplayInfoPanel = true;
                 InfoPanelFontSize = 11;
                 InfoPanelPosition = TextPosition.TopRight;
@@ -148,19 +158,19 @@ namespace NinjaTrader.NinjaScript.Strategies
                 MaDownColor = Brushes.Red;
                 ZoneColor = Brushes.Gray;
 
-                BarCondition1 = Brushes.Chartreuse;
-                BarCondition2 = Brushes.Green;
-                BarCondition3 = Brushes.LightBlue;
-                BarCondition4 = Brushes.RoyalBlue;
-                BarCondition5 = Brushes.DarkOrange;
-                BarCondition6 = Brushes.Red;
+                BarColorBullishAboveEmaHigh = Brushes.Chartreuse;
+                BarColorBearishAboveEmaHigh = Brushes.Green;
+                BarColorBullishInsideBand = Brushes.LightBlue;
+                BarColorBearishInsideBand = Brushes.RoyalBlue;
+                BarColorBullishBelowEmaLow = Brushes.DarkOrange;
+                BarColorBearishBelowEmaLow = Brushes.Red;
 
-                CandleOutlineCondition1 = Brushes.Chartreuse;
-                CandleOutlineCondition2 = Brushes.Green;
-                CandleOutlineCondition3 = Brushes.LightBlue;
-                CandleOutlineCondition4 = Brushes.RoyalBlue;
-                CandleOutlineCondition5 = Brushes.DarkOrange;
-                CandleOutlineCondition6 = Brushes.Red;
+                OutlineColorBullishAboveEmaHigh = Brushes.Chartreuse;
+                OutlineColorBearishAboveEmaHigh = Brushes.Green;
+                OutlineColorBullishInsideBand = Brushes.LightBlue;
+                OutlineColorBearishInsideBand = Brushes.RoyalBlue;
+                OutlineColorBullishBelowEmaLow = Brushes.DarkOrange;
+                OutlineColorBearishBelowEmaLow = Brushes.Red;
                 EnableMacdFilter = false;
                 MacdFast = 12;
                 MacdSlow = 26;
@@ -173,6 +183,10 @@ namespace NinjaTrader.NinjaScript.Strategies
                 VrocMin = 0.0;
 
                 EnableDebugLogging = false;
+            }
+            else if (State == State.Configure)
+            {
+                EntriesPerDirection = Math.Max(1, 1 + MaxAdditionalEntries);
             }
             else if (State == State.DataLoaded)
             {
@@ -192,6 +206,10 @@ namespace NinjaTrader.NinjaScript.Strategies
                     EMAwave34ServiceLogger.Info(() =>
                         $"[INIT] Indicator created. DrawArrows={DrawArrows} ShowMABands={ShowMABands} " +
                         $"Colorzone={Colorzone} Colorbars={Colorbars} ColorOutline={ColorOutline} Zopacity={Zopacity}", this);
+                    if (!EnableMacdFilter)
+                        EMAwave34ServiceLogger.Info(() => "[FILTER] MACD disabled; gating bypassed.", this);
+                    if (!EnableVrocFilter)
+                        EMAwave34ServiceLogger.Info(() => "[FILTER] VROC disabled; gating bypassed.", this);
                 }
 
                 if (ChartControl != null && !IsInStrategyAnalyzer)
@@ -245,6 +263,32 @@ namespace NinjaTrader.NinjaScript.Strategies
                     $"[BAR] Time={Times[0][0]:yyyy-MM-dd HH:mm:ss} Close={Close[0]:F2} " +
                     $"EmaHigh={_indicator.EmaHigh[0]:F2} EmaClose={_indicator.EmaClose[0]:F2} EmaLow={_indicator.EmaLow[0]:F2}",
                     this);
+            }
+            if (EnableDebugLogging)
+            {
+                if (!EnableMacdFilter)
+                {
+                    _macdReadyLogged = false;
+                }
+                else if (_macdFilter != null && !_macdReadyLogged && _macdFilter.IsReady)
+                {
+                    _macdReadyLogged = true;
+                    EMAwave34ServiceLogger.Info(() =>
+                        $"[FILTER_READY] MACD ready. Hist={_macdFilter.Histogram:F2} Threshold={MacdHistogramThreshold:F2}",
+                        this);
+                }
+
+                if (!EnableVrocFilter)
+                {
+                    _vrocReadyLogged = false;
+                }
+                else if (_vrocFilter != null && !_vrocReadyLogged && _vrocFilter.IsReady)
+                {
+                    _vrocReadyLogged = true;
+                    EMAwave34ServiceLogger.Info(() =>
+                        $"[FILTER_READY] VROC ready. Value={_vrocFilter.Value:F2} Min={VrocMin:F2}",
+                        this);
+                }
             }
 
             if (Bars.IsFirstBarOfSession)
@@ -315,6 +359,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                 RenderInfoPanel();
                 return;
             }
+            TryScaleInAfterBreakeven();
 
             bool longSignal = _indicator.MAnalyzer[0] > 0 && _indicator.MAnalyzer[1] <= 0;
             bool shortSignal = _indicator.MAnalyzer[0] < 0 && _indicator.MAnalyzer[1] >= 0;
@@ -324,28 +369,32 @@ namespace NinjaTrader.NinjaScript.Strategies
             bool longAllowed = longSignal && macdLongPass && vrocPass;
             bool shortAllowed = shortSignal && macdShortPass && vrocPass;
 
-            if (EnableDebugLogging && longSignal)
+            if (EnableDebugLogging && (longSignal || shortSignal))
             {
-                if (_macdFilter != null && !macdLongPass)
-                    EMAwave34ServiceLogger.Debug(() =>
-                        $"[FILTER_BLOCK] Long MACD: Hist={_macdFilter.Histogram:F2} Threshold={MacdHistogramThreshold:F2} Ready={_macdFilter.IsReady}",
-                        this);
-                if (_vrocFilter != null && !vrocPass)
-                    EMAwave34ServiceLogger.Debug(() =>
-                        $"[FILTER_BLOCK] Long VROC: Value={_vrocFilter.Value:F2} Min={VrocMin:F2} Ready={_vrocFilter.IsReady}",
-                        this);
-            }
+                double macdHist = _macdFilter != null ? _macdFilter.Histogram : double.NaN;
+                bool macdReady = _macdFilter != null && _macdFilter.IsReady;
+                double vrocValue = _vrocFilter != null ? _vrocFilter.Value : double.NaN;
+                bool vrocReady = _vrocFilter != null && _vrocFilter.IsReady;
 
-            if (EnableDebugLogging && shortSignal)
-            {
-                if (_macdFilter != null && !macdShortPass)
+                if (longSignal)
+                {
+                    bool allowed = macdLongPass && vrocPass;
                     EMAwave34ServiceLogger.Debug(() =>
-                        $"[FILTER_BLOCK] Short MACD: Hist={_macdFilter.Histogram:F2} Threshold={MacdHistogramThreshold:F2} Ready={_macdFilter.IsReady}",
+                        $"[ENTRY_DECISION] Signal=Long Allowed={allowed} " +
+                        $"MACD(pass={macdLongPass} hist={macdHist:F2} thr={MacdHistogramThreshold:F2} ready={macdReady} enabled={EnableMacdFilter}) " +
+                        $"VROC(pass={vrocPass} value={vrocValue:F2} min={VrocMin:F2} ready={vrocReady} enabled={EnableVrocFilter})",
                         this);
-                if (_vrocFilter != null && !vrocPass)
+                }
+
+                if (shortSignal)
+                {
+                    bool allowed = macdShortPass && vrocPass;
                     EMAwave34ServiceLogger.Debug(() =>
-                        $"[FILTER_BLOCK] Short VROC: Value={_vrocFilter.Value:F2} Min={VrocMin:F2} Ready={_vrocFilter.IsReady}",
+                        $"[ENTRY_DECISION] Signal=Short Allowed={allowed} " +
+                        $"MACD(pass={macdShortPass} hist={macdHist:F2} thr={MacdHistogramThreshold:F2} ready={macdReady} enabled={EnableMacdFilter}) " +
+                        $"VROC(pass={vrocPass} value={vrocValue:F2} min={VrocMin:F2} ready={vrocReady} enabled={EnableVrocFilter})",
                         this);
+                }
             }
 
             if (Position.MarketPosition == MarketPosition.Flat)
@@ -369,6 +418,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     SetProfitTarget("Long", CalculationMode.Price, targetPrice);
                     SetStopLoss("Long", CalculationMode.Price, stopPrice, false);
                     _activeStopPrice = stopPrice;
+                    _activeTargetPrice = targetPrice;
                     if (EnableDebugLogging)
                         EMAwave34ServiceLogger.Info(() => $"[ATR] Long entry ATR={atrValue:F2} Target={targetPrice:F2} Stop={stopPrice:F2}", this);
                     EnterLong(PositionQuantity, "Long");
@@ -385,6 +435,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     SetProfitTarget("Short", CalculationMode.Price, targetPrice);
                     SetStopLoss("Short", CalculationMode.Price, stopPrice, false);
                     _activeStopPrice = stopPrice;
+                    _activeTargetPrice = targetPrice;
                     if (EnableDebugLogging)
                         EMAwave34ServiceLogger.Info(() => $"[ATR] Short entry ATR={atrValue:F2} Target={targetPrice:F2} Stop={stopPrice:F2}", this);
                     EnterShort(PositionQuantity, "Short");
@@ -414,19 +465,19 @@ namespace NinjaTrader.NinjaScript.Strategies
             _indicator.MaDownColor = MaDownColor;
             _indicator.ZoneColor = ZoneColor;
 
-            _indicator.BarCondition1 = BarCondition1;
-            _indicator.BarCondition2 = BarCondition2;
-            _indicator.BarCondition3 = BarCondition3;
-            _indicator.BarCondition4 = BarCondition4;
-            _indicator.BarCondition5 = BarCondition5;
-            _indicator.BarCondition6 = BarCondition6;
+            _indicator.BarColorBullishAboveEmaHigh = BarColorBullishAboveEmaHigh;
+            _indicator.BarColorBearishAboveEmaHigh = BarColorBearishAboveEmaHigh;
+            _indicator.BarColorBullishInsideBand = BarColorBullishInsideBand;
+            _indicator.BarColorBearishInsideBand = BarColorBearishInsideBand;
+            _indicator.BarColorBullishBelowEmaLow = BarColorBullishBelowEmaLow;
+            _indicator.BarColorBearishBelowEmaLow = BarColorBearishBelowEmaLow;
 
-            _indicator.CandleOutlineCondition1 = CandleOutlineCondition1;
-            _indicator.CandleOutlineCondition2 = CandleOutlineCondition2;
-            _indicator.CandleOutlineCondition3 = CandleOutlineCondition3;
-            _indicator.CandleOutlineCondition4 = CandleOutlineCondition4;
-            _indicator.CandleOutlineCondition5 = CandleOutlineCondition5;
-            _indicator.CandleOutlineCondition6 = CandleOutlineCondition6;
+            _indicator.OutlineColorBullishAboveEmaHigh = OutlineColorBullishAboveEmaHigh;
+            _indicator.OutlineColorBearishAboveEmaHigh = OutlineColorBearishAboveEmaHigh;
+            _indicator.OutlineColorBullishInsideBand = OutlineColorBullishInsideBand;
+            _indicator.OutlineColorBearishInsideBand = OutlineColorBearishInsideBand;
+            _indicator.OutlineColorBullishBelowEmaLow = OutlineColorBullishBelowEmaLow;
+            _indicator.OutlineColorBearishBelowEmaLow = OutlineColorBearishBelowEmaLow;
         }
 
         private void ParseTradingTimes()
@@ -725,12 +776,19 @@ namespace NinjaTrader.NinjaScript.Strategies
                     _highestSinceEntry = 0;
                     _lowestSinceEntry = 0;
                     _activeStopPrice = double.NaN;
+                    _activeTargetPrice = double.NaN;
+                    _breakevenActivated = false;
+                    _breakevenActivatedBar = -1;
+                    _lastScaleInBar = -1;
                 }
                 else
                 {
                     _entryPrice = Position.AveragePrice > 0 ? Position.AveragePrice : Close[0];
                     _highestSinceEntry = High[0];
                     _lowestSinceEntry = Low[0];
+                    _breakevenActivated = false;
+                    _breakevenActivatedBar = -1;
+                    _lastScaleInBar = -1;
                 }
                 _lastMarketPosition = Position.MarketPosition;
             }
@@ -756,6 +814,13 @@ namespace NinjaTrader.NinjaScript.Strategies
 
                 if (EnableBreakeven && Close[0] - _entryPrice >= BreakevenAtr * atrValue)
                 {
+                    if (!_breakevenActivated)
+                    {
+                        _breakevenActivated = true;
+                        _breakevenActivatedBar = CurrentBar;
+                        if (EnableDebugLogging)
+                            EMAwave34ServiceLogger.Debug(() => $"[BREAKEVEN] Long activated at bar {CurrentBar}.", this);
+                    }
                     double breakevenStop = _entryPrice + BreakevenPlusTicks * TickSize;
                     stopPrice = double.IsNaN(stopPrice) ? breakevenStop : Math.Max(stopPrice, breakevenStop);
                 }
@@ -775,6 +840,13 @@ namespace NinjaTrader.NinjaScript.Strategies
 
                 if (EnableBreakeven && _entryPrice - Close[0] >= BreakevenAtr * atrValue)
                 {
+                    if (!_breakevenActivated)
+                    {
+                        _breakevenActivated = true;
+                        _breakevenActivatedBar = CurrentBar;
+                        if (EnableDebugLogging)
+                            EMAwave34ServiceLogger.Debug(() => $"[BREAKEVEN] Short activated at bar {CurrentBar}.", this);
+                    }
                     double breakevenStop = _entryPrice - BreakevenPlusTicks * TickSize;
                     stopPrice = double.IsNaN(stopPrice) ? breakevenStop : Math.Min(stopPrice, breakevenStop);
                 }
@@ -788,6 +860,46 @@ namespace NinjaTrader.NinjaScript.Strategies
                 if (!double.IsNaN(stopPrice))
                     UpdateStopLossPrice("Short", stopPrice);
             }
+        }
+        private void TryScaleInAfterBreakeven()
+        {
+            if (!EnableScaleInAfterBreakeven || !EnableBreakeven || !_breakevenActivated)
+                return;
+            if (Position.MarketPosition == MarketPosition.Flat)
+                return;
+            if (_breakevenActivatedBar >= 0 && CurrentBar <= _breakevenActivatedBar)
+                return;
+            if (_lastScaleInBar == CurrentBar)
+                return;
+
+            int additionalEntries = Math.Max(0, Position.Quantity - PositionQuantity);
+            if (additionalEntries >= MaxAdditionalEntries)
+                return;
+
+            if (Position.MarketPosition == MarketPosition.Long)
+            {
+                ApplyActiveExitOrders("Long");
+                EnterLong(1, "Long");
+            }
+            else if (Position.MarketPosition == MarketPosition.Short)
+            {
+                ApplyActiveExitOrders("Short");
+                EnterShort(1, "Short");
+            }
+
+            _lastScaleInBar = CurrentBar;
+            if (EnableDebugLogging)
+                EMAwave34ServiceLogger.Debug(() =>
+                    $"[SCALE_IN] {Position.MarketPosition} add=1 currentQty={Position.Quantity} maxAdditional={MaxAdditionalEntries} bar={CurrentBar}",
+                    this);
+        }
+
+        private void ApplyActiveExitOrders(string signalName)
+        {
+            if (!double.IsNaN(_activeTargetPrice))
+                SetProfitTarget(signalName, CalculationMode.Price, _activeTargetPrice);
+            if (!double.IsNaN(_activeStopPrice))
+                SetStopLoss(signalName, CalculationMode.Price, _activeStopPrice, false);
         }
 
         private void UpdateStopLossPrice(string signalName, double proposedStop)
@@ -952,6 +1064,22 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [NinjaScriptProperty]
+        [Display(Name = "Enable Scale-In After Breakeven", Description = "Add one contract per bar after breakeven activates.", GroupName = "Scale-In", Order = 0)]
+        public bool EnableScaleInAfterBreakeven
+        {
+            get { return _enableScaleInAfterBreakeven; }
+            set { _enableScaleInAfterBreakeven = value; }
+        }
+
+        [Range(1, 1000), NinjaScriptProperty]
+        [Display(Name = "Max Additional Entries", Description = "Maximum number of additional scale-in entries.", GroupName = "Scale-In", Order = 1)]
+        public int MaxAdditionalEntries
+        {
+            get { return _maxAdditionalEntries; }
+            set { _maxAdditionalEntries = Math.Min(1000, Math.Max(1, value)); }
+        }
+
+        [NinjaScriptProperty]
         [Display(Name = "Enable Debug Logging", Description = "Enable verbose EMAwave34ServiceLogger output.", GroupName = "Diagnostics", Order = 0)]
         public bool EnableDebugLogging
         {
@@ -998,6 +1126,15 @@ namespace NinjaTrader.NinjaScript.Strategies
                 }
             }
         }
+
+        [Browsable(false)]
+        public int OriginalPositions => PositionQuantity;
+
+        [Browsable(false)]
+        public int ScaleInPositions => Math.Max(0, Position.Quantity - PositionQuantity);
+
+        [Browsable(false)]
+        public int MaxScaleInPositions => MaxAdditionalEntries;
 
         [Browsable(false)]
         public double MacdHistogram
@@ -1244,183 +1381,183 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [XmlIgnore]
-        [Display(Name = "BarCondition1", Description = "Color of BarCondition1.", GroupName = "Indicator Visual", Order = 1)]
-        public Brush BarCondition1
+        [Display(Name = "Bar Color: Bullish Above EMA High", Description = "Bar color when Close > EMA High and the bar is bullish.", GroupName = "Indicator Visual", Order = 1)]
+        public Brush BarColorBullishAboveEmaHigh
         {
-            get { return _barColorCondition1; }
-            set { _barColorCondition1 = value; }
+            get { return _barColorBullishAboveEmaHigh; }
+            set { _barColorBullishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition1Serialize
+        public string BarColorBullishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition1); }
-            set { _barColorCondition1 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBullishAboveEmaHigh); }
+            set { _barColorBullishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "BarCondition2", Description = "Color of BarCondition2.", GroupName = "Indicator Visual", Order = 2)]
-        public Brush BarCondition2
+        [Display(Name = "Bar Color: Bearish Above EMA High", Description = "Bar color when Close > EMA High and the bar is bearish.", GroupName = "Indicator Visual", Order = 2)]
+        public Brush BarColorBearishAboveEmaHigh
         {
-            get { return _barColorCondition2; }
-            set { _barColorCondition2 = value; }
+            get { return _barColorBearishAboveEmaHigh; }
+            set { _barColorBearishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition2Serialize
+        public string BarColorBearishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition2); }
-            set { _barColorCondition2 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBearishAboveEmaHigh); }
+            set { _barColorBearishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "BarCondition3", Description = "Color of BarCondition3.", GroupName = "Indicator Visual", Order = 3)]
-        public Brush BarCondition3
+        [Display(Name = "Bar Color: Bullish Inside EMA Band", Description = "Bar color when Close is between EMA High/Low and the bar is bullish.", GroupName = "Indicator Visual", Order = 3)]
+        public Brush BarColorBullishInsideBand
         {
-            get { return _barColorCondition3; }
-            set { _barColorCondition3 = value; }
+            get { return _barColorBullishInsideBand; }
+            set { _barColorBullishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition3Serialize
+        public string BarColorBullishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition3); }
-            set { _barColorCondition3 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBullishInsideBand); }
+            set { _barColorBullishInsideBand = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "BarCondition4", Description = "Color of BarCondition4.", GroupName = "Indicator Visual", Order = 4)]
-        public Brush BarCondition4
+        [Display(Name = "Bar Color: Bearish Inside EMA Band", Description = "Bar color when Close is between EMA High/Low and the bar is bearish.", GroupName = "Indicator Visual", Order = 4)]
+        public Brush BarColorBearishInsideBand
         {
-            get { return _barColorCondition4; }
-            set { _barColorCondition4 = value; }
+            get { return _barColorBearishInsideBand; }
+            set { _barColorBearishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition4Serialize
+        public string BarColorBearishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition4); }
-            set { _barColorCondition4 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBearishInsideBand); }
+            set { _barColorBearishInsideBand = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "BarCondition5", Description = "Color of BarCondition5.", GroupName = "Indicator Visual", Order = 5)]
-        public Brush BarCondition5
+        [Display(Name = "Bar Color: Bullish Below EMA Low", Description = "Bar color when Close < EMA Low and the bar is bullish.", GroupName = "Indicator Visual", Order = 5)]
+        public Brush BarColorBullishBelowEmaLow
         {
-            get { return _barColorCondition5; }
-            set { _barColorCondition5 = value; }
+            get { return _barColorBullishBelowEmaLow; }
+            set { _barColorBullishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition5Serialize
+        public string BarColorBullishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition5); }
-            set { _barColorCondition5 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBullishBelowEmaLow); }
+            set { _barColorBullishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "BarCondition6", Description = "Color of BarCondition6.", GroupName = "Indicator Visual", Order = 6)]
-        public Brush BarCondition6
+        [Display(Name = "Bar Color: Bearish Below EMA Low", Description = "Bar color when Close < EMA Low and the bar is bearish.", GroupName = "Indicator Visual", Order = 6)]
+        public Brush BarColorBearishBelowEmaLow
         {
-            get { return _barColorCondition6; }
-            set { _barColorCondition6 = value; }
+            get { return _barColorBearishBelowEmaLow; }
+            set { _barColorBearishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string BarCondition6Serialize
+        public string BarColorBearishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_barColorCondition6); }
-            set { _barColorCondition6 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_barColorBearishBelowEmaLow); }
+            set { _barColorBearishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "CandleOutlineCondition1", Description = "Color of CandleOutlineCondition1.", GroupName = "Indicator Visual", Order = 7)]
-        public Brush CandleOutlineCondition1
+        [Display(Name = "Outline Color: Bullish Above EMA High", Description = "Outline color when Close > EMA High and the bar is bullish.", GroupName = "Indicator Visual", Order = 7)]
+        public Brush OutlineColorBullishAboveEmaHigh
         {
-            get { return _candleOutlineCondition1; }
-            set { _candleOutlineCondition1 = value; }
+            get { return _outlineColorBullishAboveEmaHigh; }
+            set { _outlineColorBullishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition1Serialize
+        public string OutlineColorBullishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition1); }
-            set { _candleOutlineCondition1 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBullishAboveEmaHigh); }
+            set { _outlineColorBullishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "CandleOutlineCondition2", Description = "Color of CandleOutlineCondition2.", GroupName = "Indicator Visual", Order = 8)]
-        public Brush CandleOutlineCondition2
+        [Display(Name = "Outline Color: Bearish Above EMA High", Description = "Outline color when Close > EMA High and the bar is bearish.", GroupName = "Indicator Visual", Order = 8)]
+        public Brush OutlineColorBearishAboveEmaHigh
         {
-            get { return _candleOutlineCondition2; }
-            set { _candleOutlineCondition2 = value; }
+            get { return _outlineColorBearishAboveEmaHigh; }
+            set { _outlineColorBearishAboveEmaHigh = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition2Serialize
+        public string OutlineColorBearishAboveEmaHighSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition2); }
-            set { _candleOutlineCondition2 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBearishAboveEmaHigh); }
+            set { _outlineColorBearishAboveEmaHigh = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "CandleOutlineCondition3", Description = "Color of CandleOutlineCondition3.", GroupName = "Indicator Visual", Order = 9)]
-        public Brush CandleOutlineCondition3
+        [Display(Name = "Outline Color: Bullish Inside EMA Band", Description = "Outline color when Close is between EMA High/Low and the bar is bullish.", GroupName = "Indicator Visual", Order = 9)]
+        public Brush OutlineColorBullishInsideBand
         {
-            get { return _candleOutlineCondition3; }
-            set { _candleOutlineCondition3 = value; }
+            get { return _outlineColorBullishInsideBand; }
+            set { _outlineColorBullishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition3Serialize
+        public string OutlineColorBullishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition3); }
-            set { _candleOutlineCondition3 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBullishInsideBand); }
+            set { _outlineColorBullishInsideBand = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "CandleOutlineCondition4", Description = "Color of CandleOutlineCondition4.", GroupName = "Indicator Visual", Order = 10)]
-        public Brush CandleOutlineCondition4
+        [Display(Name = "Outline Color: Bearish Inside EMA Band", Description = "Outline color when Close is between EMA High/Low and the bar is bearish.", GroupName = "Indicator Visual", Order = 10)]
+        public Brush OutlineColorBearishInsideBand
         {
-            get { return _candleOutlineCondition4; }
-            set { _candleOutlineCondition4 = value; }
+            get { return _outlineColorBearishInsideBand; }
+            set { _outlineColorBearishInsideBand = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition4Serialize
+        public string OutlineColorBearishInsideBandSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition4); }
-            set { _candleOutlineCondition4 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBearishInsideBand); }
+            set { _outlineColorBearishInsideBand = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "CandleOutlineCondition5", Description = "Color of CandleOutlineCondition5.", GroupName = "Indicator Visual", Order = 11)]
-        public Brush CandleOutlineCondition5
+        [Display(Name = "Outline Color: Bullish Below EMA Low", Description = "Outline color when Close < EMA Low and the bar is bullish.", GroupName = "Indicator Visual", Order = 11)]
+        public Brush OutlineColorBullishBelowEmaLow
         {
-            get { return _candleOutlineCondition5; }
-            set { _candleOutlineCondition5 = value; }
+            get { return _outlineColorBullishBelowEmaLow; }
+            set { _outlineColorBullishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition5Serialize
+        public string OutlineColorBullishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition5); }
-            set { _candleOutlineCondition5 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBullishBelowEmaLow); }
+            set { _outlineColorBullishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "CandleOutlineCondition6", Description = "Color of CandleOutlineCondition6.", GroupName = "Indicator Visual", Order = 12)]
-        public Brush CandleOutlineCondition6
+        [Display(Name = "Outline Color: Bearish Below EMA Low", Description = "Outline color when Close < EMA Low and the bar is bearish.", GroupName = "Indicator Visual", Order = 12)]
+        public Brush OutlineColorBearishBelowEmaLow
         {
-            get { return _candleOutlineCondition6; }
-            set { _candleOutlineCondition6 = value; }
+            get { return _outlineColorBearishBelowEmaLow; }
+            set { _outlineColorBearishBelowEmaLow = value; }
         }
 
         [Browsable(false)]
-        public string CandleOutlineCondition6Serialize
+        public string OutlineColorBearishBelowEmaLowSerialize
         {
-            get { return Serialize.BrushToString(_candleOutlineCondition6); }
-            set { _candleOutlineCondition6 = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(_outlineColorBearishBelowEmaLow); }
+            set { _outlineColorBearishBelowEmaLow = Serialize.StringToBrush(value); }
         }
 
         bool IEMAwave34LoggingConfig.EnableDebugLogging => EnableDebugLogging;
