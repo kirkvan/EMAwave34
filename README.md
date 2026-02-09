@@ -1,5 +1,8 @@
 # EMAwave34 – Handoff for New Conversation
 
+## Operational note
+In `C:\Users\Administrator\Documents\EMAwave34`, stage all changes, create a commit with an appropriate message, then force‑push the local master branch so it overwrites both origin/main and origin/master, ensuring the remote repo kirkvan/EMAwave34 exactly matches the local folder.
+
 ## Current status
 - **Control Panel** is working (Enable Strategy + Display Info Panel buttons).
 - **Info Panel** toggles correctly and reappears; strategy enable toggle gates entries only.
