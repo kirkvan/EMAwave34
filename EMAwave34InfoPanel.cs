@@ -123,7 +123,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 
             return "=== Entry/Stops ===\n" +
                    $"Qty: {_strategy.PositionQuantity}\n" +
-                   $"Scale-In: {_strategy.ScaleInPositions}/{_strategy.MaxScaleInPositions} (Orig {_strategy.OriginalPositions})\n" +
+                   $"Scale-In: {_strategy.ScaleInPositions}/{_strategy.MaxScaleInPositions} (Orig {_strategy.OriginalPositions}) " +
+                   $"(Start x{_strategy.ScaleInStartAtr:F1} Stop x{_strategy.ScaleInStopAtr:F1})\\n" +
                    $"ATR(14): {atrText}\n" +
                    $"Target x{_strategy.ProfitTargetAtr:F1}  Stop x{_strategy.StopLossAtr:F1}\n" +
                    $"Trail Stop: {(_strategy.EnableTrailingStop ? "ON" : "OFF")}\n" +

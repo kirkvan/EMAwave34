@@ -11,11 +11,18 @@ In `C:\Users\Administrator\Documents\EMAwave34`, stage all changes, create a com
   - Indicator drawings suppressed when no `ChartControl` (Analyzer) to keep runs clean.
   - Info panel disposed on termination.
   - Trading-hours gate uses wall-clock **only** in realtime non-Playback; otherwise bar time.
+## Latest changes (2026-02-11)
+- **Scale-in logic updated:** removed breakeven checkbox; added ATR start/stop window for scale-ins (one contract per scale-in within window).
+- **Info panel updated:** displays scale-in ATR window values.
+- **Compile fixes:** corrected malformed string/attribute literals introduced during scale-in changes.
+
 ## Latest changes (2026-02-09)
 - **Indicator Visual renaming:** bar/outline color properties renamed to descriptive names (e.g., “Bullish Above EMA High”). Note: serialized property names changed, so older templates/workspaces may reset these colors.
 - **Info Panel readability:** MACD/VROC lines are compact; `Hist`/`Value` now appear on an indented second line to reduce line length.
 - **Filter logging clarity:** per-filter block logs replaced by a single `[ENTRY_DECISION]` line per signal; added one-time `[FILTER_READY]` logs when MACD/VROC warm up; added one-time `[FILTER] ... disabled` logs.
 - **Session PnL baseline** resets when the strategy is enabled (in addition to session start), so the info panel reflects trades taken since enable.
+- **Log files ignored:** `log-*.txt` is now ignored and removed from version control.
+- **Scale-In min clarified:** “Max Additional Entries” description now explicitly states min 1, max 1000.
 
 ## Latest logging (for debugging trade rule violations)
 Conditional (EnableDebugLogging = true) logs now include:

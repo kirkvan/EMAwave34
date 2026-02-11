@@ -44,7 +44,6 @@ namespace NinjaTrader.NinjaScript.Strategies
         private double _activeStopPrice = double.NaN;
         private double _activeTargetPrice = double.NaN;
         private bool _breakevenActivated;
-        private int _breakevenActivatedBar = -1;
         private int _lastScaleInBar = -1;
 
         private int _positionQuantity = 1;
@@ -61,7 +60,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         private bool _enableBreakeven = true;
         private double _breakevenAtr = 1.0;
         private int _breakevenPlusTicks = 1;
-        private bool _enableScaleInAfterBreakeven;
+        private double _scaleInStartAtr;
+        private double _scaleInStopAtr;
         private int _maxAdditionalEntries = 1;
         private bool _displayInfoPanel = true;
         private int _infoPanelFontSize = 11;
@@ -137,7 +137,8 @@ namespace NinjaTrader.NinjaScript.Strategies
                 EnableBreakeven = true;
                 BreakevenAtr = 1.0;
                 BreakevenPlusTicks = 1;
-                EnableScaleInAfterBreakeven = false;
+                ScaleInStartAtr = 1.0;
+                ScaleInStopAtr = 3.0;
                 MaxAdditionalEntries = 70;
                 DisplayInfoPanel = true;
                 InfoPanelFontSize = 11;
@@ -359,7 +360,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                 RenderInfoPanel();
                 return;
             }
-            TryScaleInAfterBreakeven();
+            TryScaleInByAtrWindow();
 
             bool longSignal = _indicator.MAnalyzer[0] > 0 && _indicator.MAnalyzer[1] <= 0;
             bool shortSignal = _indicator.MAnalyzer[0] < 0 && _indicator.MAnalyzer[1] >= 0;
@@ -778,7 +779,6 @@ namespace NinjaTrader.NinjaScript.Strategies
                     _activeStopPrice = double.NaN;
                     _activeTargetPrice = double.NaN;
                     _breakevenActivated = false;
-                    _breakevenActivatedBar = -1;
                     _lastScaleInBar = -1;
                 }
                 else
@@ -787,7 +787,6 @@ namespace NinjaTrader.NinjaScript.Strategies
                     _highestSinceEntry = High[0];
                     _lowestSinceEntry = Low[0];
                     _breakevenActivated = false;
-                    _breakevenActivatedBar = -1;
                     _lastScaleInBar = -1;
                 }
                 _lastMarketPosition = Position.MarketPosition;
@@ -817,7 +816,6 @@ namespace NinjaTrader.NinjaScript.Strategies
                     if (!_breakevenActivated)
                     {
                         _breakevenActivated = true;
-                        _breakevenActivatedBar = CurrentBar;
                         if (EnableDebugLogging)
                             EMAwave34ServiceLogger.Debug(() => $"[BREAKEVEN] Long activated at bar {CurrentBar}.", this);
                     }
@@ -843,7 +841,6 @@ namespace NinjaTrader.NinjaScript.Strategies
                     if (!_breakevenActivated)
                     {
                         _breakevenActivated = true;
-                        _breakevenActivatedBar = CurrentBar;
                         if (EnableDebugLogging)
                             EMAwave34ServiceLogger.Debug(() => $"[BREAKEVEN] Short activated at bar {CurrentBar}.", this);
                     }
@@ -861,15 +858,24 @@ namespace NinjaTrader.NinjaScript.Strategies
                     UpdateStopLossPrice("Short", stopPrice);
             }
         }
-        private void TryScaleInAfterBreakeven()
+        private void TryScaleInByAtrWindow()
         {
-            if (!EnableScaleInAfterBreakeven || !EnableBreakeven || !_breakevenActivated)
-                return;
             if (Position.MarketPosition == MarketPosition.Flat)
                 return;
-            if (_breakevenActivatedBar >= 0 && CurrentBar <= _breakevenActivatedBar)
-                return;
             if (_lastScaleInBar == CurrentBar)
+                return;
+            if (ScaleInStartAtr <= 0 || ScaleInStopAtr <= 0 || ScaleInStopAtr < ScaleInStartAtr)
+                return;
+
+            double atrValue = _atr != null ? _atr[0] : double.NaN;
+            if (double.IsNaN(atrValue) || atrValue <= 0)
+                return;
+
+            double atrGain = Position.MarketPosition == MarketPosition.Long
+                ? (Close[0] - _entryPrice) / atrValue
+                : (_entryPrice - Close[0]) / atrValue;
+
+            if (atrGain < ScaleInStartAtr || atrGain > ScaleInStopAtr)
                 return;
 
             int additionalEntries = Math.Max(0, Position.Quantity - PositionQuantity);
@@ -890,7 +896,8 @@ namespace NinjaTrader.NinjaScript.Strategies
             _lastScaleInBar = CurrentBar;
             if (EnableDebugLogging)
                 EMAwave34ServiceLogger.Debug(() =>
-                    $"[SCALE_IN] {Position.MarketPosition} add=1 currentQty={Position.Quantity} maxAdditional={MaxAdditionalEntries} bar={CurrentBar}",
+                    $"[SCALE_IN] {Position.MarketPosition} add=1 atrGain={atrGain:F2} window={ScaleInStartAtr:F2}-{ScaleInStopAtr:F2} " +
+                    $"currentQty={Position.Quantity} maxAdditional={MaxAdditionalEntries} bar={CurrentBar}",
                     this);
         }
 
@@ -1063,16 +1070,24 @@ namespace NinjaTrader.NinjaScript.Strategies
             set { _breakevenPlusTicks = Math.Max(0, value); }
         }
 
-        [NinjaScriptProperty]
-        [Display(Name = "Enable Scale-In After Breakeven", Description = "Add one contract per bar after breakeven activates.", GroupName = "Scale-In", Order = 0)]
-        public bool EnableScaleInAfterBreakeven
+        [Range(0, 100), NinjaScriptProperty]
+        [Display(Name = "Scale-In Start ATR", Description = "ATR gain required before scale-ins begin (<= 0 disables).", GroupName = "Scale-In", Order = 0)]
+        public double ScaleInStartAtr
         {
-            get { return _enableScaleInAfterBreakeven; }
-            set { _enableScaleInAfterBreakeven = value; }
+            get { return _scaleInStartAtr; }
+            set { _scaleInStartAtr = Math.Max(0, value); }
+        }
+
+        [Range(0, 100), NinjaScriptProperty]
+        [Display(Name = "Scale-In Stop ATR", Description = "ATR gain at which scale-ins stop (<= 0 disables; must be >= Start).", GroupName = "Scale-In", Order = 1)]
+        public double ScaleInStopAtr
+        {
+            get { return _scaleInStopAtr; }
+            set { _scaleInStopAtr = Math.Max(0, value); }
         }
 
         [Range(1, 1000), NinjaScriptProperty]
-        [Display(Name = "Max Additional Entries", Description = "Maximum number of additional scale-in entries.", GroupName = "Scale-In", Order = 1)]
+        [Display(Name = "Max Additional Entries", Description = "Maximum number of additional scale-in entries (min 1, max 1000).", GroupName = "Scale-In", Order = 2)]
         public int MaxAdditionalEntries
         {
             get { return _maxAdditionalEntries; }
@@ -1239,7 +1254,7 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [Range(0, double.MaxValue), NinjaScriptProperty]
-        [Display(Name = "MACD Histogram Min", Description = "Minimum histogram magnitude required (long >=, short <= -).", GroupName = "Momentum Filters", Order = 4)]
+        [Display(Name = "MACD Histogram Threshold Filter (points)", Description = "Minimum histogram magnitude required (long >=, short <= -).", GroupName = "Momentum Filters", Order = 4)]
         public double MacdHistogramThreshold
         {
             get { return _macdHistogramThreshold; }
