@@ -15,6 +15,7 @@ In `C:\Users\Administrator\Documents\EMAwave34`, stage all changes, create a com
 - **Scale-in logic updated:** removed breakeven checkbox; added ATR start/stop window for scale-ins (one contract per scale-in within window).
 - **Info panel updated:** displays scale-in ATR window values.
 - **Compile fixes:** corrected malformed string/attribute literals introduced during scale-in changes.
+- **Reverse-on-signal fix:** reversal logic now executes before EMA band exit rules, so the Reverse parameter affects results when opposite signals occur.
 
 ## Latest changes (2026-02-09)
 - **Indicator Visual renaming:** bar/outline color properties renamed to descriptive names (e.g., “Bullish Above EMA High”). Note: serialized property names changed, so older templates/workspaces may reset these colors.

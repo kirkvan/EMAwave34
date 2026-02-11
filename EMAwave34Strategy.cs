@@ -32,6 +32,7 @@ namespace NinjaTrader.NinjaScript.Strategies
         private bool _haltTradingForSession;
         private bool _loggedIndicatorStatus;
         private bool _strategyEnabled = true;
+        private bool _enableReverseOnSignal = true;
         private bool _isInPosition;
         private bool _lastControlPanelInPosition;
         private bool _lastControlPanelStrategyEnabled = true;
@@ -143,6 +144,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                 DisplayInfoPanel = true;
                 InfoPanelFontSize = 11;
                 InfoPanelPosition = TextPosition.TopRight;
+                EnableReverseOnSignal = true;
                 _strategyEnabled = true;
 
                 Emah = 34;
@@ -313,6 +315,73 @@ namespace NinjaTrader.NinjaScript.Strategies
 
                 _haltTradingForSession = true;
             }
+            bool longSignal = _indicator.MAnalyzer[0] > 0 && _indicator.MAnalyzer[1] <= 0;
+            bool shortSignal = _indicator.MAnalyzer[0] < 0 && _indicator.MAnalyzer[1] >= 0;
+            bool macdLongPass = _macdFilter == null || _macdFilter.PassLong();
+            bool macdShortPass = _macdFilter == null || _macdFilter.PassShort();
+            bool vrocPass = _vrocFilter == null || _vrocFilter.Pass();
+            bool longAllowed = longSignal && macdLongPass && vrocPass;
+            bool shortAllowed = shortSignal && macdShortPass && vrocPass;
+            bool reverseGate = EnableReverseOnSignal &&
+                               !_haltTradingForSession &&
+                               _strategyEnabled &&
+                               IsWithinTradingWindow(Times[0][0]);
+
+            if (reverseGate && Position.MarketPosition == MarketPosition.Long && shortAllowed)
+            {
+                double atrValue = _atr != null ? _atr[0] : double.NaN;
+                if (double.IsNaN(atrValue) || atrValue <= 0)
+                {
+                    UpdateControlPanelState();
+                    RenderInfoPanel();
+                    return;
+                }
+                if (EnableDebugLogging)
+                    EMAwave34ServiceLogger.Debug(() =>
+                        $"[REVERSE] Long -> Short signal accepted. ATR={atrValue:F2} qty={Position.Quantity}", this);
+
+                double targetPrice = Close[0] - atrValue * ProfitTargetAtr;
+                double stopPrice = Close[0] + atrValue * StopLossAtr;
+                SetProfitTarget("Short", CalculationMode.Price, targetPrice);
+                SetStopLoss("Short", CalculationMode.Price, stopPrice, false);
+                _activeStopPrice = stopPrice;
+                _activeTargetPrice = targetPrice;
+
+                int reverseQty = Math.Max(1, Position.Quantity);
+                ExitLong("ReverseLong");
+                EnterShort(reverseQty, "Short");
+                UpdateControlPanelState();
+                RenderInfoPanel();
+                return;
+            }
+
+            if (reverseGate && Position.MarketPosition == MarketPosition.Short && longAllowed)
+            {
+                double atrValue = _atr != null ? _atr[0] : double.NaN;
+                if (double.IsNaN(atrValue) || atrValue <= 0)
+                {
+                    UpdateControlPanelState();
+                    RenderInfoPanel();
+                    return;
+                }
+                if (EnableDebugLogging)
+                    EMAwave34ServiceLogger.Debug(() =>
+                        $"[REVERSE] Short -> Long signal accepted. ATR={atrValue:F2} qty={Position.Quantity}", this);
+
+                double targetPrice = Close[0] + atrValue * ProfitTargetAtr;
+                double stopPrice = Close[0] - atrValue * StopLossAtr;
+                SetProfitTarget("Long", CalculationMode.Price, targetPrice);
+                SetStopLoss("Long", CalculationMode.Price, stopPrice, false);
+                _activeStopPrice = stopPrice;
+                _activeTargetPrice = targetPrice;
+
+                int reverseQty = Math.Max(1, Position.Quantity);
+                ExitShort("ReverseShort");
+                EnterLong(reverseQty, "Long");
+                UpdateControlPanelState();
+                RenderInfoPanel();
+                return;
+            }
 
             if (Position.MarketPosition == MarketPosition.Long && Close[0] < _indicator.EmaLow[0])
             {
@@ -362,14 +431,6 @@ namespace NinjaTrader.NinjaScript.Strategies
             }
             TryScaleInByAtrWindow();
 
-            bool longSignal = _indicator.MAnalyzer[0] > 0 && _indicator.MAnalyzer[1] <= 0;
-            bool shortSignal = _indicator.MAnalyzer[0] < 0 && _indicator.MAnalyzer[1] >= 0;
-            bool macdLongPass = _macdFilter == null || _macdFilter.PassLong();
-            bool macdShortPass = _macdFilter == null || _macdFilter.PassShort();
-            bool vrocPass = _vrocFilter == null || _vrocFilter.Pass();
-            bool longAllowed = longSignal && macdLongPass && vrocPass;
-            bool shortAllowed = shortSignal && macdShortPass && vrocPass;
-
             if (EnableDebugLogging && (longSignal || shortSignal))
             {
                 double macdHist = _macdFilter != null ? _macdFilter.Histogram : double.NaN;
@@ -397,7 +458,6 @@ namespace NinjaTrader.NinjaScript.Strategies
                         this);
                 }
             }
-
             if (Position.MarketPosition == MarketPosition.Flat)
             {
                 double atrValue = _atr != null ? _atr[0] : double.NaN;
@@ -941,6 +1001,14 @@ namespace NinjaTrader.NinjaScript.Strategies
         {
             get { return _positionQuantity; }
             set { _positionQuantity = Math.Max(1, value); }
+        }
+
+        [NinjaScriptProperty]
+        [Display(Name = "Reverse On Opposite Signal", Description = "Reverse position when the opposite signal passes all filters.", GroupName = "Strategy Settings", Order = 1)]
+        public bool EnableReverseOnSignal
+        {
+            get { return _enableReverseOnSignal; }
+            set { _enableReverseOnSignal = value; }
         }
 
         [Range(1, 10000), NinjaScriptProperty]
