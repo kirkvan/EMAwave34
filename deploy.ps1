@@ -65,6 +65,7 @@ $strategyFiles = @(
     "EMAwave34ServiceLogger.cs",
     "EMAwave34ServiceMacdFilter.cs",
     "EMAwave34ServiceVrocFilter.cs",
+    "EMAwave34ServiceHmaFilter.cs",
     "EMAwave34InfoPanel.cs",
     "EMAwave34ControlPanel.cs"
 )

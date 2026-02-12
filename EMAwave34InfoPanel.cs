@@ -120,6 +120,23 @@ namespace NinjaTrader.NinjaScript.Strategies
             {
                 vrocText = "VROC: OFF";
             }
+            string hmaText;
+            if (_strategy.EnableHmaFilter)
+            {
+                string hmaValue = double.IsNaN(_strategy.HmaValue) ? "n/a" : _strategy.HmaValue.ToString("F2");
+                string hmaWarmupText = _strategy.HmaFilterReady
+                    ? "READY"
+                    : $"WARMUP {_strategy.HmaWarmupBarsRemaining}/{_strategy.HmaWarmupBarsRequired}";
+                bool hmaLongAllowed = _strategy.HmaFilterReady && _strategy.Close[0] > _strategy.HmaValue;
+                bool hmaShortAllowed = _strategy.HmaFilterReady && _strategy.Close[0] < _strategy.HmaValue;
+                string hmaEntryText = $"Longs {(hmaLongAllowed ? "Allowed" : "Blocked")}, Shorts {(hmaShortAllowed ? "Allowed" : "Blocked")}";
+                hmaText = $"HMA: ON | {hmaWarmupText} | {hmaEntryText}\n" +
+                          $"  Value {hmaValue} (Period {_strategy.HmaPeriod})";
+            }
+            else
+            {
+                hmaText = "HMA: OFF";
+            }
 
             return "=== Entry/Stops ===\n" +
                    $"Qty: {_strategy.PositionQuantity}\n" +
@@ -130,7 +147,8 @@ namespace NinjaTrader.NinjaScript.Strategies
                    $"Trail Stop: {(_strategy.EnableTrailingStop ? "ON" : "OFF")}\n" +
                    $"Breakeven: {(_strategy.EnableBreakeven ? "ON" : "OFF")}\n" +
                    $"{macdText}\n" +
-                   $"{vrocText}";
+                   $"{vrocText}\n" +
+                   $"{hmaText}";
         }
 
         private string GetRiskDisplay()

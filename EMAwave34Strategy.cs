@@ -84,6 +84,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         private Brush _zoneColor = Brushes.Gray;
         private EMAwave34ServiceMacdFilter _macdFilter;
         private EMAwave34ServiceVrocFilter _vrocFilter;
+        private EMAwave34ServiceHmaFilter _hmaFilter;
+        private HMA _hmaIndicator;
 
         private bool _enableMacdFilter;
         private int _macdFast = 12;
@@ -97,6 +99,11 @@ namespace NinjaTrader.NinjaScript.Strategies
         private int _vrocSmooth = 3;
         private double _vrocMin = 0.0;
         private bool _vrocReadyLogged;
+        private bool _enableHmaFilter = true;
+        private int _hmaPeriod = 144;
+        private bool _hmaReadyLogged;
+        private Brush _hmaLineColor = Brushes.Purple;
+        private int _hmaLineWidth = 2;
 
         private Brush _barColorBullishAboveEmaHigh = Brushes.Chartreuse;
         private Brush _barColorBearishAboveEmaHigh = Brushes.Green;
@@ -184,6 +191,10 @@ namespace NinjaTrader.NinjaScript.Strategies
                 VrocPeriod = 14;
                 VrocSmooth = 3;
                 VrocMin = 0.0;
+                EnableHmaFilter = true;
+                HmaPeriod = 144;
+                HmaLineColor = Brushes.Purple;
+                HmaLineWidth = 2;
 
                 EnableDebugLogging = false;
             }
@@ -197,6 +208,8 @@ namespace NinjaTrader.NinjaScript.Strategies
                 _atr = ATR(AtrPeriod);
                 _macdFilter = new EMAwave34ServiceMacdFilter(this, MacdFast, MacdSlow, MacdSmooth, MacdHistogramThreshold, EnableMacdFilter);
                 _vrocFilter = new EMAwave34ServiceVrocFilter(this, VrocPeriod, VrocSmooth, VrocMin, EnableVrocFilter);
+                _hmaFilter = new EMAwave34ServiceHmaFilter(this, HmaPeriod, EnableHmaFilter);
+                _hmaIndicator = _hmaFilter?.Indicator;
                 _infoPanel = new EMAwave34InfoPanel(this);
                 _infoPanel.Initialize();
                 ApplyIndicatorSettings();
@@ -213,6 +226,8 @@ namespace NinjaTrader.NinjaScript.Strategies
                         EMAwave34ServiceLogger.Info(() => "[FILTER] MACD disabled; gating bypassed.", this);
                     if (!EnableVrocFilter)
                         EMAwave34ServiceLogger.Info(() => "[FILTER] VROC disabled; gating bypassed.", this);
+                    if (!EnableHmaFilter)
+                        EMAwave34ServiceLogger.Info(() => "[FILTER] HMA disabled; gating bypassed.", this);
                 }
 
                 if (ChartControl != null && !IsInStrategyAnalyzer)
@@ -226,6 +241,22 @@ namespace NinjaTrader.NinjaScript.Strategies
                     catch (Exception ex)
                     {
                         EMAwave34ServiceLogger.Warn(() => $"[CHART] AddChartIndicator failed: {ex.Message}", this);
+                    }
+
+                    if (EnableHmaFilter && _hmaIndicator != null)
+                    {
+                        try
+                        {
+                            _hmaIndicator.Plots[0].Brush = HmaLineColor;
+                            _hmaIndicator.Plots[0].Width = HmaLineWidth;
+                            AddChartIndicator(_hmaIndicator);
+                            if (EnableDebugLogging)
+                                EMAwave34ServiceLogger.Info(() => "[CHART] Added HMA indicator to chart.", this);
+                        }
+                        catch (Exception ex)
+                        {
+                            EMAwave34ServiceLogger.Warn(() => $"[CHART] AddChartIndicator (HMA) failed: {ex.Message}", this);
+                        }
                     }
                 }
                 else if (EnableDebugLogging)
@@ -292,6 +323,18 @@ namespace NinjaTrader.NinjaScript.Strategies
                         $"[FILTER_READY] VROC ready. Value={_vrocFilter.Value:F2} Min={VrocMin:F2}",
                         this);
                 }
+
+                if (!EnableHmaFilter)
+                {
+                    _hmaReadyLogged = false;
+                }
+                else if (_hmaFilter != null && !_hmaReadyLogged && _hmaFilter.IsReady)
+                {
+                    _hmaReadyLogged = true;
+                    EMAwave34ServiceLogger.Info(() =>
+                        $"[FILTER_READY] HMA ready. Value={_hmaFilter.Value:F2} Period={HmaPeriod}",
+                        this);
+                }
             }
 
             if (Bars.IsFirstBarOfSession)
@@ -320,8 +363,10 @@ namespace NinjaTrader.NinjaScript.Strategies
             bool macdLongPass = _macdFilter == null || _macdFilter.PassLong();
             bool macdShortPass = _macdFilter == null || _macdFilter.PassShort();
             bool vrocPass = _vrocFilter == null || _vrocFilter.Pass();
-            bool longAllowed = longSignal && macdLongPass && vrocPass;
-            bool shortAllowed = shortSignal && macdShortPass && vrocPass;
+            bool hmaLongPass = _hmaFilter == null || _hmaFilter.PassLong();
+            bool hmaShortPass = _hmaFilter == null || _hmaFilter.PassShort();
+            bool longAllowed = longSignal && macdLongPass && vrocPass && hmaLongPass;
+            bool shortAllowed = shortSignal && macdShortPass && vrocPass && hmaShortPass;
             bool reverseGate = EnableReverseOnSignal &&
                                !_haltTradingForSession &&
                                _strategyEnabled &&
@@ -437,24 +482,28 @@ namespace NinjaTrader.NinjaScript.Strategies
                 bool macdReady = _macdFilter != null && _macdFilter.IsReady;
                 double vrocValue = _vrocFilter != null ? _vrocFilter.Value : double.NaN;
                 bool vrocReady = _vrocFilter != null && _vrocFilter.IsReady;
+                double hmaValue = _hmaFilter != null ? _hmaFilter.Value : double.NaN;
+                bool hmaReady = _hmaFilter != null && _hmaFilter.IsReady;
 
                 if (longSignal)
                 {
-                    bool allowed = macdLongPass && vrocPass;
+                    bool allowed = macdLongPass && vrocPass && hmaLongPass;
                     EMAwave34ServiceLogger.Debug(() =>
                         $"[ENTRY_DECISION] Signal=Long Allowed={allowed} " +
                         $"MACD(pass={macdLongPass} hist={macdHist:F2} thr={MacdHistogramThreshold:F2} ready={macdReady} enabled={EnableMacdFilter}) " +
-                        $"VROC(pass={vrocPass} value={vrocValue:F2} min={VrocMin:F2} ready={vrocReady} enabled={EnableVrocFilter})",
+                        $"VROC(pass={vrocPass} value={vrocValue:F2} min={VrocMin:F2} ready={vrocReady} enabled={EnableVrocFilter}) " +
+                        $"HMA(pass={hmaLongPass} value={hmaValue:F2} period={HmaPeriod} ready={hmaReady} enabled={EnableHmaFilter})",
                         this);
                 }
 
                 if (shortSignal)
                 {
-                    bool allowed = macdShortPass && vrocPass;
+                    bool allowed = macdShortPass && vrocPass && hmaShortPass;
                     EMAwave34ServiceLogger.Debug(() =>
                         $"[ENTRY_DECISION] Signal=Short Allowed={allowed} " +
                         $"MACD(pass={macdShortPass} hist={macdHist:F2} thr={MacdHistogramThreshold:F2} ready={macdReady} enabled={EnableMacdFilter}) " +
-                        $"VROC(pass={vrocPass} value={vrocValue:F2} min={VrocMin:F2} ready={vrocReady} enabled={EnableVrocFilter})",
+                        $"VROC(pass={vrocPass} value={vrocValue:F2} min={VrocMin:F2} ready={vrocReady} enabled={EnableVrocFilter}) " +
+                        $"HMA(pass={hmaShortPass} value={hmaValue:F2} period={HmaPeriod} ready={hmaReady} enabled={EnableHmaFilter})",
                         this);
                 }
             }
@@ -1265,6 +1314,29 @@ namespace NinjaTrader.NinjaScript.Strategies
         {
             get { return EnableVrocFilter ? Math.Max(0, VrocWarmupBarsRequired - CurrentBar) : 0; }
         }
+        [Browsable(false)]
+        public double HmaValue
+        {
+            get { return _hmaFilter != null ? _hmaFilter.Value : double.NaN; }
+        }
+
+        [Browsable(false)]
+        public bool HmaFilterReady
+        {
+            get { return _hmaFilter != null && _hmaFilter.IsReady; }
+        }
+
+        [Browsable(false)]
+        public int HmaWarmupBarsRequired
+        {
+            get { return HmaPeriod; }
+        }
+
+        [Browsable(false)]
+        public int HmaWarmupBarsRemaining
+        {
+            get { return EnableHmaFilter ? Math.Max(0, HmaWarmupBarsRequired - CurrentBar) : 0; }
+        }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
         [Display(Name = "EMA High Period", Description = "Number of bars used for the EMA calculated on High prices.", GroupName = "Indicator Parameters", Order = 1)]
@@ -1359,6 +1431,44 @@ namespace NinjaTrader.NinjaScript.Strategies
         {
             get { return _vrocMin; }
             set { _vrocMin = Math.Max(0, value); }
+        }
+        [NinjaScriptProperty]
+        [Display(Name = "Enable HMA Filter", Description = "Require Close relative to HMA for entries.", GroupName = "Momentum Filters", Order = 20)]
+        public bool EnableHmaFilter
+        {
+            get { return _enableHmaFilter; }
+            set { _enableHmaFilter = value; }
+        }
+
+        [Range(3, 293), NinjaScriptProperty]
+        [Display(Name = "HMA Period", Description = "Hull Moving Average period (min 3, max 293).", GroupName = "Momentum Filters", Order = 21)]
+        public int HmaPeriod
+        {
+            get { return _hmaPeriod; }
+            set { _hmaPeriod = Math.Max(3, Math.Min(293, value)); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "HMA Line Color", Description = "Line color for the HMA on the chart.", GroupName = "Momentum Filters", Order = 22)]
+        public Brush HmaLineColor
+        {
+            get { return _hmaLineColor; }
+            set { _hmaLineColor = value; }
+        }
+
+        [Browsable(false)]
+        public string HmaLineColorSerialize
+        {
+            get { return Serialize.BrushToString(_hmaLineColor); }
+            set { _hmaLineColor = Serialize.StringToBrush(value); }
+        }
+
+        [Range(1, 10), NinjaScriptProperty]
+        [Display(Name = "HMA Line Width", Description = "Line width for the HMA on the chart.", GroupName = "Momentum Filters", Order = 23)]
+        public int HmaLineWidth
+        {
+            get { return _hmaLineWidth; }
+            set { _hmaLineWidth = Math.Min(10, Math.Max(1, value)); }
         }
 
 

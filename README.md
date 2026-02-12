@@ -11,6 +11,11 @@ In `C:\Users\Administrator\Documents\EMAwave34`, stage all changes, create a com
   - Indicator drawings suppressed when no `ChartControl` (Analyzer) to keep runs clean.
   - Info panel disposed on termination.
   - Trading-hours gate uses wall-clock **only** in realtime non-Playback; otherwise bar time.
+## Latest changes (2026-02-12)
+- **HMA filter added:** new HMA gate (default enabled, period 144; min 3 max 293) with service module.
+- **HMA chart display:** HMA indicator shows on chart when filter enabled; configurable line color/width (default Purple, width 2).
+- **Info panel + logs:** HMA status/value/ready state included.
+
 ## Latest changes (2026-02-11)
 - **Scale-in logic updated:** removed breakeven checkbox; added ATR start/stop window for scale-ins (one contract per scale-in within window).
 - **Info panel updated:** displays scale-in ATR window values.
