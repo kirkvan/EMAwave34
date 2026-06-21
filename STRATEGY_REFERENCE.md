@@ -1,9 +1,9 @@
-# AGENTS.md
+# EMAwave34 - Strategy Reference
 Always: I manually deploy, compile, test, and report back my feedback.
-This file provides guidance to WARP (warp.dev) and LLM agents when working in this repository.
+This file provides guidance to Claude Code and other LLM agents when working in this repository.
 
 ## Critical workflow rules
-- Edit source only in `C:\Users\Administrator\Documents\EMAwave34\` (this repo). Do not edit NinjaTrader target folders directly.
+- Edit source only in `C:\Users\Administrator\Documents\My Work\Strategies\EMAwave34\` (this repo). Do not edit NinjaTrader target folders directly.
 - Deploy using `deploy.ps1`. NinjaTrader compiles on restart or F5. No CLI build is defined here.
 - Do not stage/commit/push unless explicitly asked by the user after they deploy/compile/test.
 - Naming: use **EMAwave34** consistently everywhere (classes, files, strings). Avoid digit-leading names.
