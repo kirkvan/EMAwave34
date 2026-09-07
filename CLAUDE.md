@@ -6,7 +6,7 @@ floating control/info panel.
 
 Universal NinjaScript rules - safety (no deploy/compile/launch/Playback/Analyzer runs), git
 handling, ASCII/no-BOM source, and the NT8-owned `#region NinjaScript generated code` - live in
-the shared `..\..\NinjaTrader Documentation\CLAUDE.md` and apply here. This file covers only
+the shared `..\NinjaTrader Documentation\CLAUDE.md` and apply here. This file covers only
 EMAwave34 specifics.
 
 ## Documentation map
@@ -14,7 +14,7 @@ EMAwave34 specifics.
 - `STRATEGY_REFERENCE.md` (in-repo) - agent handoff notes and project-specific guidance;
   consult before non-trivial work. (Was previously `AGENTS.md`.)
 - `README.md` - project overview and change history.
-- Shared NinjaTrader references live in the My Work-level `..\..\NinjaTrader Documentation\`
+- Shared NinjaTrader references live in the My Work-level `..\NinjaTrader Documentation\`
   folder (NT8 order/state, NinjaScript conventions, Analyzer troubleshooting). Read the NT8
   docs before order-lifecycle or state-transition work.
 
