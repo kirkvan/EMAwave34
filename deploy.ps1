@@ -9,6 +9,9 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = if (-not [string]::IsNullOrEmpty($PSScriptRoot)) { $PSScriptRoot } else { (Get-Location).Path }
 
+$DeployCopied = 0
+$DeployMissing = 0
+
 Write-Host "`n=== EMAwave34 Pre-Deploy Checks ===" -ForegroundColor Cyan
 Write-Host "Running ASCII/BOM check..." -ForegroundColor Yellow
 
@@ -84,9 +87,9 @@ foreach ($file in $strategyFiles) {
     
     if (Test-Path $sourcePath) {
         Copy-Item $sourcePath $targetPath -Force
-        Write-Host "  [OK] $file" -ForegroundColor Green
+        $DeployCopied++; Write-Host "  [OK] $file" -ForegroundColor Green
     } else {
-        Write-Host "  [MISSING] $file" -ForegroundColor Red
+        $DeployMissing++; Write-Host "  [MISSING] $file" -ForegroundColor Red
     }
 }
 
@@ -101,9 +104,9 @@ foreach ($file in $indicatorFiles) {
     
     if (Test-Path $sourcePath) {
         Copy-Item $sourcePath $targetPath -Force
-        Write-Host "  [OK] $leaf" -ForegroundColor Green
+        $DeployCopied++; Write-Host "  [OK] $leaf" -ForegroundColor Green
     } else {
-        Write-Host "  [MISSING] $file" -ForegroundColor Red
+        $DeployMissing++; Write-Host "  [MISSING] $file" -ForegroundColor Red
     }
 }
 
@@ -134,3 +137,19 @@ foreach ($legacy in $legacyIndicators) {
 Write-Host "`n=== Deployment Complete ===" -ForegroundColor Cyan
 Write-Host "Now compile in NinjaTrader (F5)" -ForegroundColor Yellow
 Write-Host ""
+
+# --- Deploy verification -----------------------------------------------------
+# A deploy that copies nothing must FAIL, not print red text and return success.
+# Octave's did exactly that: $source named a folder that did not exist, so every
+# file reported [MISSING] and the script still exited 0, which looked like a
+# successful run. Added 2026-09-07.
+if ($DeployMissing -gt 0 -or $DeployCopied -eq 0) {
+    Write-Host ""
+    if ($DeployCopied -eq 0) {
+        Write-Host "DEPLOY FAILED: no files were copied." -ForegroundColor Red
+        Write-Host "  Nothing reached bin\Custom - check that the source path resolves." -ForegroundColor Yellow
+    } else {
+        Write-Host "DEPLOY FAILED: $DeployMissing file(s) missing, $DeployCopied copied." -ForegroundColor Red
+    }
+    exit 1
+}
