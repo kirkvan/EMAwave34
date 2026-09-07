@@ -70,7 +70,7 @@ Control Panel debug spam **removed** (UpdateState logs).
   - Removes legacy `34emawave.cs` / `34EMAwaveStrategy.cs` from NT targets
   - Does NOT remove `ServiceLogger.cs` (Leapfrog dependency)
 - `AGENTS.md`
-  - Expanded Warp/LLM guide + “I manually deploy/compile/test and report back.”
+  - Expanded agent/LLM guide (now `CLAUDE.md`) + “I manually deploy/compile/test and report back.”
 
 ## Known behavior
 - Strategy uses **managed orders**, **OnBarClose**.
