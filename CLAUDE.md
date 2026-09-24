@@ -9,6 +9,14 @@ handling, ASCII/no-BOM source, and the NT8-owned `#region NinjaScript generated 
 the shared `..\NinjaTrader Documentation\CLAUDE.md` and apply here. This file covers only
 EMAwave34 specifics.
 
+## Not yet deployed
+
+- **The Colors group's dialog Orders** (commit `017e69e`, 2026-09-24). "9. Color
+  for Falling MA" and "10. Color for Zone" shared Order 7 with "8. Color for
+  Rising MA"; they are now 8 and 9. Dialog order only, no trading change. The
+  account holder chose not to deploy it yet. The copy in NinjaTrader still has
+  the collision until `deploy.ps1 -NoPause` runs. Remove this entry once it has.
+
 ## Documentation map
 
 - `STRATEGY_REFERENCE.md` (in-repo) - agent handoff notes and project-specific guidance;
