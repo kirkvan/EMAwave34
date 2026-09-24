@@ -4,6 +4,44 @@
 # NOTE: This script performs an ASCII-only + UTF-8 BOM guard
 # so you can just run deploy.ps1 before compiling.
 
+param(
+    # Skip every keypress, so the deploy can run unattended.
+    [switch]$NoPause,
+
+    # Deploy even though a strategy is enabled. See Assert-NtNoEnabledStrategy
+    # in NinjaTrader Documentation\tools\nt-compile.ps1 for why that is refused.
+    [switch]$AllowEnabledStrategy,
+
+    # Deploy even though a .cs file differs from the last commit. See
+    # Assert-NtSourceCommitted in the same file.
+    [switch]$AllowDirtySource
+)
+
+# --- Deploy guard, shared with every project (added 2026-09-24) ---------------
+# NinjaTrader recompiles the WHOLE custom assembly about four seconds after any
+# file lands in bin\Custom - underneath any running strategy, logging nothing.
+# So nothing below may write or delete there until both checks pass: no
+# strategy is enabled, and every .cs in this project is committed. Both live in
+# NinjaTrader Documentation\tools\nt-compile.ps1, found by walking up. Its
+# absence is a refusal, never a skip.
+$ntTools = $null
+$ntProbe = $PSScriptRoot
+while (-not [string]::IsNullOrEmpty($ntProbe)) {
+    $ntCandidate = Join-Path (Join-Path (Join-Path $ntProbe 'NinjaTrader Documentation') 'tools') 'nt-compile.ps1'
+    if (Test-Path -LiteralPath $ntCandidate) { $ntTools = $ntCandidate; break }
+    $ntProbe = Split-Path $ntProbe -Parent
+}
+if ($null -eq $ntTools) {
+    Write-Host 'DEPLOY REFUSED: cannot find nt-compile.ps1 in any parent folder' -ForegroundColor Red
+    Write-Host '  Clone the NinjaTrader Documentation project alongside this one.' -ForegroundColor Yellow
+    exit 1
+}
+. $ntTools
+Assert-NtNoEnabledStrategy -Allow:$AllowEnabledStrategy
+# This project keeps its source at its root, not in src\, so the deployed source
+# is named explicitly: every .cs file, at any depth.
+Assert-NtSourceCommitted -Root $PSScriptRoot -Paths @('*.cs') -Allow:$AllowDirtySource
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -135,7 +173,7 @@ foreach ($legacy in $legacyIndicators) {
 }
 
 Write-Host "`n=== Deployment Complete ===" -ForegroundColor Cyan
-Write-Host "Now compile in NinjaTrader (F5)" -ForegroundColor Yellow
+Write-Host "NinjaTrader compiles this automatically - F5 is not required." -ForegroundColor Yellow
 Write-Host ""
 
 # --- Deploy verification -----------------------------------------------------
@@ -153,3 +191,12 @@ if ($DeployMissing -gt 0 -or $DeployCopied -eq 0) {
     }
     exit 1
 }
+
+# --- Compile verification (added 2026-09-24) ----------------------------------
+# Copying is not deploying: until NinjaTrader rebuilds the assembly the files on
+# disk are inert, and a failed compile leaves the OLD code live while every file
+# looks correct. Wait-NtCompile exits 1 unless the assembly ends up newer than
+# every deployed source file.
+Write-Host ""
+Write-Host "Waiting for NinjaTrader to compile..." -ForegroundColor Yellow
+Wait-NtCompile -Since $null
