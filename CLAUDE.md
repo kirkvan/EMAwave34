@@ -26,3 +26,13 @@ EMAwave34 specifics.
   `EMAwave34ServiceVrocFilter.cs` - entry filter services.
 - `EMAwave34ServiceLogger.cs` - logging service.
 - `deploy.ps1` - manual copy script for NinjaTrader Custom folders. Do not run it.
+
+## Gate
+
+`tests\preflight.ps1` calls the shared minimal gate,
+`..\NinjaTrader Documentation\tools\project-preflight.ps1`: ASCII and no BOM,
+a syntax parse with NinjaTrader's own Roslyn, a unique `[Display]` Order within
+each group, documentation links, PowerShell static analysis, and the version
+rule. The pre-commit hook runs it on every commit here. It proves syntax, not a
+compile, and nothing about trading behavior - F5 and a SIM run remain the
+acceptance tests.

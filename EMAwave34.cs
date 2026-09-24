@@ -506,7 +506,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 		
 		[XmlIgnore()]
 		
-		[Display(Name = "9. Color for Falling MA", Description = "Color for Falling MA", GroupName = "Colors", Order = 7)]
+		[Display(Name = "9. Color for Falling MA", Description = "Color for Falling MA", GroupName = "Colors", Order = 8)]
         public Brush MaDownColor
         {
             get { return _maDownColor; }
@@ -522,7 +522,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 		
 		[XmlIgnore()]
 		
-		[Display(Name = "10. Color for Zone", Description = "Color for Zone", GroupName = "Colors", Order = 7)]
+		[Display(Name = "10. Color for Zone", Description = "Color for Zone", GroupName = "Colors", Order = 9)]
         public Brush ZoneColor
         {
             get { return _zoneColor; }
