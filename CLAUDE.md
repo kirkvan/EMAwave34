@@ -4,7 +4,7 @@ Project agent contract for `kirkvan/EMAwave34`. NinjaTrader 8 NinjaScript C# str
 futures, built around an EMA-wave entry model with HMA, MACD, and VROC service filters and a
 floating control/info panel.
 
-Universal NinjaScript rules - safety (no deploy/compile/launch/Playback/Analyzer runs), git
+Universal NinjaScript rules - safety (no compile/launch/Playback/Analyzer runs), git
 handling, ASCII/no-BOM source, and the NT8-owned `#region NinjaScript generated code` - live in
 the shared `..\NinjaTrader Documentation\CLAUDE.md` and apply here. This file covers only
 EMAwave34 specifics.
@@ -25,7 +25,9 @@ EMAwave34 specifics.
 - `EMAwave34ServiceHmaFilter.cs`, `EMAwave34ServiceMacdFilter.cs`,
   `EMAwave34ServiceVrocFilter.cs` - entry filter services.
 - `EMAwave34ServiceLogger.cs` - logging service.
-- `deploy.ps1` - manual copy script for NinjaTrader Custom folders. Do not run it.
+- `deploy.ps1` - copies the source to NinjaTrader's Custom folders; run it as
+  `deploy.ps1 -NoPause`. It refuses while a strategy is enabled or any `.cs`
+  is uncommitted, and fails unless NinjaTrader then rebuilds the assembly.
 
 ## Gate
 
